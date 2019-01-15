@@ -6,40 +6,24 @@ public class MyRobot extends BCAbstractRobot {
 	public Action turn() {
 		doAllUnitActions();
 
+		BCRobot robot = null;
 		if (me.unit == SPECS.CASTLE) {
-			return doCastle();
+		    robot = new Castle(this);
 		} else if (me.unit == SPECS.PILGRIM) {
-			return doPilgrim();
+			robot = new Pilgrim(this);
 		} else if (me.unit == SPECS.CHURCH) {
-
+			//robot = new Church(this);
 		} else if (me.unit == SPECS.CRUSADER) {
-
+		    //robot = new Crusader(this);
 		} else if (me.unit == SPECS.PROPHET) {
-
+			//robot = new Prophet(this);
 		} else if (me.unit == SPECS.PREACHER) {
-
+			//robot = new Preacher(this);
 		}
-		return null;
+		return robot.act();
 	}
 
 	private void doAllUnitActions() {
 		turn++;
-	}
-
-	private Action doCastle() {
-		if (turn == 1) {
-			log("Building a pilgrim.");
-			return buildUnit(SPECS.PILGRIM, 1, 0);
-		}
-		return null;
-	}
-
-	private Action doPilgrim() {
-		if (me.unit == SPECS.PILGRIM) {
-			if (turn == 1) {
-				log("I am a pilgrim.");
-			}
-		}
-		return null;
 	}
 }
