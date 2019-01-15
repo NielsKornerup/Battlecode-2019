@@ -1,21 +1,27 @@
 package bc19;
 
-import java.util.*;
+import java.util.ArrayList;
+import java.util.List;
 
 public class Navigation {
 
     private MyRobot r;
     private boolean[][] passableMap;
-    private Set<Point> targets;
+    private List<Point> targets;
     private int maxDistance;
     private int[][] distances;
 
     public void printDistances() {
-        for(int i = 0; i < distances.length; i++) {
-            for(int j = 0; j < distances[0].length; j++) {
-                System.out.print(distances[i][j] + " ");
+        for (int i = 0; i < distances.length; i++) {
+            String thing = "";
+            for (int j = 0; j < distances[0].length; j++) {
+                if (distances[i][j] < 10000) {
+                    thing += (distances[i][j] + " ");
+                } else {
+                    thing += "inf";
+                }
             }
-            System.out.println();
+            r.log(thing);
         }
     }
 
@@ -26,23 +32,23 @@ public class Navigation {
 
     private ArrayList<Point> getPossibleMovementDeltas(int maxMovementR) {
         ArrayList<Point> deltas = new ArrayList<>();
-       for (int dx = -maxMovementR; dx <= maxMovementR; dx++) {
-          for (int dy = -maxMovementR; dy <= maxMovementR; dy++) {
-              if (dx == 0 && dy == 0) {
-                  continue;
-              }
-              if (dx * dx + dy * dy > maxMovementR * maxMovementR) {
-                  continue;
-              }
+        for (int dx = -maxMovementR; dx <= maxMovementR; dx++) {
+            for (int dy = -maxMovementR; dy <= maxMovementR; dy++) {
+                if (dx == 0 && dy == 0) {
+                    continue;
+                }
+                if (dx * dx + dy * dy > maxMovementR * maxMovementR) {
+                    continue;
+                }
 
-              deltas.add(new Point(dx, dy));
-          }
-       }
-       return deltas;
+                deltas.add(new Point(dx, dy));
+            }
+        }
+        return deltas;
     }
 
     private ArrayList<Point> getAdjacentDeltas() {
-        ArrayList<Point> deltas  = new ArrayList<>();
+        ArrayList<Point> deltas = new ArrayList<>();
         int[] dxes = {-1, 0, 1};
         int[] dyes = {-1, 0, 1};
         for (int dx : dxes) {
@@ -66,15 +72,16 @@ public class Navigation {
         }
 
         // Add targets
-        Queue<Point> queue = new ArrayDeque<>();
+
+        Queue<Point> queue = new Queue<>();
         for (Point target : targets) {
             distances[target.y][target.x] = 0;
-            queue.add(new Point(target.x, target.y));
+            queue.enqueue(new Point(target.x, target.y));
         }
 
         // BFS out
         while (!queue.isEmpty()) {
-            Point loc = queue.poll();
+            Point loc = queue.dequeue();
             int curDistance = distances[loc.y][loc.x];
 
             for (Point disp : movementDeltas) {
@@ -82,7 +89,7 @@ public class Navigation {
                 int newY = loc.getY() + disp.y;
 
                 // Check on board
-                if (newX < 0 || newY < 0 || newY > distances.length || newY > distances[0].length) {
+                if (newX < 0 || newY < 0 || newY >= distances.length || newX >= distances[0].length) {
                     continue;
                 }
 
@@ -105,13 +112,13 @@ public class Navigation {
                 }
 
                 distances[newY][newX] = newDistance;
-                queue.add(new Point(newX, newY));
+                queue.enqueue(new Point(newX, newY));
             }
         }
     }
 
 
-    public Navigation(MyRobot r, boolean[][] passableMap, Set<Point> targets, int maxDistance) {
+    public Navigation(MyRobot r, boolean[][] passableMap, List<Point> targets, int maxDistance) {
         // TODO MAKE THIS BASED OFF OF FUEL COST
         // TODO ACCOUNT FOR CASE WHERE THERE IS INPENETRABLE WALL SEPARATING THINGS
         this.r = r;
@@ -122,21 +129,22 @@ public class Navigation {
         recalculateDistanceMap();
     }
 
-    public Navigation(MyRobot r, boolean[][] passableMap, Set<Point> targets) {
+    public Navigation(MyRobot r, boolean[][] passableMap, List<Point> targets) {
         this(r, passableMap, targets, Integer.MAX_VALUE);
     }
 
 
     /**
      * Returns a delta to move according to a start location and radius (not r_squared, just r)
-     *
+     * <p>
      * Tries all possible directions, returning the best one we can move towards.
-     *
+     * <p>
      * Uses some sort of heuristic to weight moving quick against using fuel.
-     *
+     * <p>
      * Null is returned if all adjacent squares are 'too far' (over threshold)
      * or impossible to reach.
      */
+
     public Point getNextMove(int radius) {
         ArrayList<Point> possibleDeltas = getPossibleMovementDeltas(radius); // TODO shuffle for tiebreaking
 
@@ -180,7 +188,7 @@ public class Navigation {
         targets.clear();
     }
 
-    public Set<Point> getTargets() {
+    public List<Point> getTargets() {
         return targets;
     }
 }
