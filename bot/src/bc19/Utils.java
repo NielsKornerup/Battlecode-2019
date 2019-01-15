@@ -32,9 +32,13 @@ public class Utils {
 
     }
 
-    public static boolean enoughFuelToMove(MyRobot r, int dx, int dy) {
+    public static int getFuelCost(MyRobot r, int dx, int dy) {
         int rSquared = dx * dx + dy * dy;
-        return mySpecs(r).FUEL_PER_MOVE * rSquared <= r.fuel;
+        return mySpecs(r).FUEL_PER_MOVE * rSquared;
+    }
+
+    public static boolean enoughFuelToMove(MyRobot r, int dx, int dy) {
+        return getFuelCost(r, dx, dy) <= r.fuel;
     }
 
     /*

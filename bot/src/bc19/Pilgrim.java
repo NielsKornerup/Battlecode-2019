@@ -1,7 +1,5 @@
 package bc19;
 
-import java.util.ArrayList;
-
 public class Pilgrim implements BCRobot {
 
     MyRobot r;
