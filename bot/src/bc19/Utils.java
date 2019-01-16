@@ -28,8 +28,11 @@ public class Utils {
         if (Utils.canMove(r, delta)) {
             return r.move(delta.x, delta.y);
         } else {
-            return Utils.moveRandom(r);
+            if (r.fuel > 5 * mySpecs(r).FUEL_PER_MOVE) {
+                return Utils.moveRandom(r);
+            }
         }
+        return null;
     }
 
     public static UnitSpec getSpecs(MyRobot r, int unitType) {
@@ -99,10 +102,10 @@ public class Utils {
     /*
     Returns arraylist of [dx, dy] of Units that are directly adjacent
      */
-    public static ArrayList<Point> getAdjacentUnits(MyRobot r, int unitType, boolean myTeam) {
+    public static ArrayList<Point> getAdjacentUnits(MyRobot r, int unitType) {
         ArrayList<Point> nearby = new ArrayList<>();
         for (Robot robot : r.getVisibleRobots()) {
-            if ((robot.unit != unitType && unitType != -1) || ((robot.team == r.me.team) == myTeam)) {
+            if (robot.unit != unitType) {
                 continue;
             }
             if (Math.abs(robot.x - r.me.x) <= 1 && Math.abs(robot.y - r.me.y) <= 1) {

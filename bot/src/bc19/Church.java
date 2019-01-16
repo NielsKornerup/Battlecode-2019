@@ -2,16 +2,15 @@ package bc19;
 
 import java.util.ArrayList;
 
-public class Castle implements BCRobot {
+public class Church implements BCRobot {
+
     private static final int MAX_PILGRIMS = 5;
-
     MyRobot r;
-    static int pilgrimsBuilt = 0;
+    static int pilgrimsBuilt;
 
-    public Castle(MyRobot myRobot) {
+    public Church(MyRobot myRobot) {
         this.r = myRobot;
     }
-
 
     public Action act() {
         if (r.karbonite > Utils.getSpecs(r, r.SPECS.PILGRIM).CONSTRUCTION_KARBONITE && r.fuel > Utils.getSpecs(r, r.SPECS.PILGRIM).CONSTRUCTION_FUEL && pilgrimsBuilt < MAX_PILGRIMS) {
@@ -24,4 +23,3 @@ public class Castle implements BCRobot {
     }
 
 }
-
