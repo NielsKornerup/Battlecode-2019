@@ -5,6 +5,33 @@ import java.util.ArrayList;
 
 public class Utils {
 
+    private static final int PILGRIM_MINE_FUEL_COST = 1;
+
+    public static boolean canMove(MyRobot r, Point delta) {
+        // TODO need to reduce calls to these functions
+        boolean[][] passableMap = r.getPassableMap();
+        int[][] visibleRobotMap = r.getVisibleRobotMap();
+        int newX = r.me.x + delta.x;
+        int newY = r.me.y + delta.y;
+        if (newX < 0 || newY < 0 || newY > passableMap.length || newX > passableMap[0].length) {
+            return false;
+        }
+        return passableMap[newY][newX] && (visibleRobotMap[newY][newX] <= 0) && enoughFuelToMove(r, delta.x, delta.y);
+    }
+
+    public static boolean canMine(MyRobot r) {
+        return r.fuel >= PILGRIM_MINE_FUEL_COST;
+    }
+
+    public static Action moveMapThenRandom(MyRobot r, Navigation map, int radius) {
+        Point delta = map.getNextMove(radius);
+        if (Utils.canMove(r, delta)) {
+            return r.move(delta.x, delta.y);
+        } else {
+            return Utils.moveRandom(r);
+        }
+    }
+
     public static UnitSpec getSpecs(MyRobot r, int unitType) {
         return r.SPECS.UNITS[unitType];
     }
@@ -19,12 +46,11 @@ public class Utils {
             return null;
         }
 
-
         while (candidates.size() > 0) {
             int index = (int) (Math.random() * candidates.size());
             Point move = candidates.get(index);
-            if (enoughFuelToMove(r, move.x, move.y)) {
-               return r.move(move.x, move.y);
+            if (canMove(r, move)) {
+                return r.move(move.x, move.y);
             }
             candidates.remove(index);
         }
@@ -68,6 +94,41 @@ public class Utils {
             }
         }
         return freeSpaces;
+    }
+
+    /*
+    Returns arraylist of [dx, dy] of Units that are directly adjacent
+     */
+    public static ArrayList<Point> getAdjacentUnits(MyRobot r, int unitType, boolean myTeam) {
+        ArrayList<Point> nearby = new ArrayList<>();
+        for (Robot robot : r.getVisibleRobots()) {
+            if ((robot.unit != unitType && unitType != -1) || ((robot.team == r.me.team) == myTeam)) {
+                continue;
+            }
+            if (Math.abs(robot.x - r.me.x) <= 1 && Math.abs(robot.y - r.me.y) <= 1) {
+                nearby.add(new Point(robot.x - r.me.x, robot.y - r.me.y));
+            }
+        }
+        return nearby;
+    }
+
+    /*
+    Returns ArrayList of [dx, dy] of Units that are
+     */
+    public static ArrayList<Point> getUnitsInRange(MyRobot r, int unitType, boolean myTeam,  int minRadius, int maxRadius) {
+        ArrayList<Point> nearby = new ArrayList<>();
+        for (Robot robot : r.getVisibleRobots()) {
+            if ((robot.unit != unitType && unitType != -1) || ((robot.team == r.me.team) == myTeam)) {
+                continue;
+            }
+            int distX = robot.x - r.me.x;
+            int distY = robot.y - r.me.y;
+            int distanceSquared = distX * distX + distY * distY;
+            if (distanceSquared >= minRadius * minRadius && distanceSquared <= maxRadius * maxRadius) {
+                nearby.add(new Point(robot.x - r.me.x, robot.y - r.me.y));
+            }
+        }
+        return nearby;
     }
 
 
