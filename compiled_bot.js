@@ -527,6 +527,8 @@ var bc19;
                 throw new bc19.BCException("Cannot attack outside of vision range.");
             if (!this.map[this.me.y + dy][this.me.x + dx])
                 throw new bc19.BCException("Cannot attack impassable terrain.");
+            if (this.gameState.shadow[this.me.y + dy][this.me.x + dx] === 0)
+                throw new bc19.BCException("Cannot attack empty tile.");
             var r = dx * dx + dy * dy;
             if (r > this.SPECS.UNITS[this.me.unit].ATTACK_RADIUS[1] || r < this.SPECS.UNITS[this.me.unit].ATTACK_RADIUS[0])
                 throw new bc19.BCException("Cannot attack outside of attack range.");

@@ -2,7 +2,7 @@ package bc19;
 
 import java.util.ArrayList;
 
-public class AttackAction extends bc19.Action {
+public class AttackAction extends Action {
 	String action;
 	int dx;
 	int dy;

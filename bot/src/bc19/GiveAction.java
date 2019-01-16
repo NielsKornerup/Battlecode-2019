@@ -2,7 +2,7 @@ package bc19;
 
 import java.util.ArrayList;
 
-public class GiveAction extends bc19.Action {
+public class GiveAction extends Action {
 	String action;
 	int give_karbonite;
 	int give_fuel;

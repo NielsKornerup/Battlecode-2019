@@ -1,5 +1,8 @@
 package bc19;
 
+import java.util.ArrayList;
+
+@jsweet.lang.Interface
 public class Robot {
 	public int id;
 	public int team;
@@ -7,6 +10,7 @@ public class Robot {
 	public int y;
 	public int unit;
 	public int turn;
+	public int time;
 	public int health;
 	public int karbonite;
 	public int fuel;

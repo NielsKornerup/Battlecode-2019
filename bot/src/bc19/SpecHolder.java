@@ -1,5 +1,6 @@
 package bc19;
 
+@jsweet.lang.Interface
 public class SpecHolder {
 	public int COMMUNICATION_BITS;
 	public int CASTLE_TALK_BITS;
@@ -23,5 +24,5 @@ public class SpecHolder {
 	public int BLUE;
 	public int CHESS_INITIAL;
 	public int CHESS_EXTRA;
-	public bc19.UnitSpec[] UNITS;
+	public UnitSpec[] UNITS;
 }

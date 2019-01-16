@@ -2,7 +2,7 @@ package bc19;
 
 import java.util.ArrayList;
 
-public class ErrorAction extends bc19.Action {
+public class ErrorAction extends Action {
 	String error;
 
 	public ErrorAction(Exception error, int signal, int signalRadius, ArrayList<String> logs, int castleTalk) {

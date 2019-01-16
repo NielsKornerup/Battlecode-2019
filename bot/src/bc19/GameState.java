@@ -1,9 +1,10 @@
 package bc19;
 
+@jsweet.lang.Interface
 public class GameState {
 	public int id;
 	public int[][] shadow;
-	public bc19.Robot[] visible;
+	public Robot[] visible;
 	public boolean[][] map;
 	public boolean[][] karbonite_map;
 	public boolean[][] fuel_map;
