@@ -13,7 +13,7 @@ public class Utils {
         int[][] visibleRobotMap = r.getVisibleRobotMap();
         int newX = r.me.x + delta.x;
         int newY = r.me.y + delta.y;
-        if (newX < 0 || newY < 0 || newY > passableMap.length || newX > passableMap[0].length) {
+        if (newX < 0 || newY < 0 || newY >= passableMap.length || newX >= passableMap[0].length) {
             return false;
         }
         return passableMap[newY][newX] && (visibleRobotMap[newY][newX] <= 0) && enoughFuelToMove(r, delta.x, delta.y);
