@@ -12,7 +12,7 @@ public class MyRobot extends BCAbstractRobot {
 		} else if (me.unit == SPECS.PILGRIM) {
 			robot = new Pilgrim(this);
 		} else if (me.unit == SPECS.CHURCH) {
-			robot = new Castle(this);
+			robot = new Church(this);
 		} else if (me.unit == SPECS.CRUSADER) {
 		    //robot = new Crusader(this);
 		} else if (me.unit == SPECS.PROPHET) {

@@ -50,7 +50,7 @@ public class Utils {
         return null;
     }
 
-    public static BuildAction buildInRandomAdjacentSpace(MyRobot r, int unitToBuild) {
+    public static BuildAction tryAndBuildInRandomSpace(MyRobot r, int unitToBuild) {
         ArrayList<Point> freeSpaces = Utils.getAdjacentFreeSpaces(r);
         if (freeSpaces.size() == 0) {
             return null;

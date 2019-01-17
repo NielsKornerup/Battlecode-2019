@@ -135,11 +135,11 @@ public class Navigation {
 
 
     /**
-     * Returns a delta to move according to a start location and radius (not r_squared, just r)
+     * Returns a best delta to move according to a start location and radius (not r_squared, just r)
      * <p>
-     * Tries all possible directions, returning the best one we can move towards.
+     * Tries all possible directions, returning their optimality in sorted order.
      * <p>
-     * Uses some sort of heuristic to weight moving quick against using fuel.
+     * TODO: Uses some sort of heuristic to weight moving quick against using fuel.
      * <p>
      * Null is returned if all adjacent squares are 'too far' (over threshold)
      * or impossible to reach.
@@ -158,8 +158,8 @@ public class Navigation {
             if (newX > -1 && newY > -1
                     && newY < distances.length
                     && newX < distances[newY].length
-                    && distances[newY][newX] < minDist) {
-                // TODO check that square not occupied by unit
+                    && distances[newY][newX] < minDist
+                    && Utils.canMove(r, delta)) { // TODO optimize this
                 bestDelta = delta;
                 minDist = distances[newY][newX];
             }

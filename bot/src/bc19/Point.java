@@ -1,6 +1,6 @@
 package bc19;
 
-public class Point {
+public class Point implements Comparable<Point> {
     int x;
     int y;
 
@@ -15,5 +15,10 @@ public class Point {
 
     public int getY() {
         return y;
+    }
+
+    @Override
+    public int compareTo(Point point) {
+        return 0;
     }
 }
