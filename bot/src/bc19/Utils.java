@@ -158,4 +158,33 @@ public class Utils {
         return freeSpaces;
     }
 
+    public static Point getMirroredCastle(MyRobot rob) {
+        boolean[][] passableMap = rob.getPassableMap();
+        int ht = passableMap.length;
+        int wid = passableMap[0].length;
+
+        int locX = rob.me.x;
+        int locY = rob.me.y;
+        
+        //Check for vertical symmetry
+        boolean verticalSymmetry = true;
+        for (int c = 0; c<wid; c++){
+            for (int r = 0; r<=((int)(ht/2))+1; r++){
+            	
+                if (passableMap[r][c]!=passableMap[ht-r-1][c]){
+                    verticalSymmetry = false;
+                    break;
+                }
+                
+            }
+        }
+        if (verticalSymmetry){
+        	rob.log("Vertical Symmetry");
+        	return new Point(locX, ht-locY-1);
+        }
+    	rob.log("Horizontal Symmetry");
+    	return new Point(wid-locX-1, locY);
+        //return new Point(locX, locY);
+    }
+
 }
