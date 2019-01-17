@@ -1,12 +1,10 @@
 package bc19;
 
-import java.util.ArrayList;
-
 public class Castle implements BCRobot {
-    private static final int MAX_PILGRIMS = 5;
+    private static final int MAX_INITIAL_PILGRIMS = 2;
+    private static int initialPilgrimsBuilt = 0;
 
     MyRobot r;
-    static int pilgrimsBuilt = 0;
 
     public Castle(MyRobot myRobot) {
         this.r = myRobot;
@@ -14,11 +12,30 @@ public class Castle implements BCRobot {
 
 
     public Action act() {
-        if (r.karbonite > Utils.getSpecs(r, r.SPECS.PILGRIM).CONSTRUCTION_KARBONITE && r.fuel > Utils.getSpecs(r, r.SPECS.PILGRIM).CONSTRUCTION_FUEL && pilgrimsBuilt < MAX_PILGRIMS) {
-            ArrayList<Point> freeSpaces = Utils.getAdjacentFreeSpaces(r);
-            Point move = freeSpaces.get((int) (Math.random() * freeSpaces.size()));
-            pilgrimsBuilt += 1;
-            return r.buildUnit(r.SPECS.PILGRIM, move.x, move.y);
+        // Build our initial pilgrims
+        if (initialPilgrimsBuilt < MAX_INITIAL_PILGRIMS) {
+            BuildAction action = Utils.buildInRandomAdjacentSpace(r, r.SPECS.PILGRIM);
+            if (action != null) {
+                initialPilgrimsBuilt++;
+                return action;
+            }
+        }
+
+        // Build a pilgrim if there are none in vision radius
+        int numPilgrims = Utils.getUnitsInRange(r, r.SPECS.PILGRIM, true, 0, Utils.mySpecs(r).VISION_RADIUS).size();
+        if (numPilgrims < 1) {
+            BuildAction action = Utils.buildInRandomAdjacentSpace(r, r.SPECS.PILGRIM);
+            if (action != null) {
+                return action;
+            }
+        }
+
+        // TODO implement logic/heuristics to prevent existing units from starving Castle of building opportunities
+
+        // Build a prophet otherwise
+        BuildAction action = Utils.buildInRandomAdjacentSpace(r, r.SPECS.PROPHET);
+        if (action != null) {
+            return action;
         }
         return null;
     }

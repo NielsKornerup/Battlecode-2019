@@ -23,6 +23,28 @@ public class Utils {
         return r.fuel >= PILGRIM_MINE_FUEL_COST;
     }
 
+    public static boolean canAttack(MyRobot r, int dx, int dy) {
+        if (r.me.unit == r.SPECS.PROPHET) {
+            if (dx * dx + dy * dy < Utils.mySpecs(r).ATTACK_RADIUS[0]) { // TODO should this be [0] or [1]?
+                return false;
+            }
+        }
+        return r.fuel >= Utils.mySpecs(r).ATTACK_FUEL_COST;
+    }
+
+    public static boolean canBuild(MyRobot r, int unitToBuild) {
+        return r.karbonite >= Utils.getSpecs(r, unitToBuild).CONSTRUCTION_KARBONITE && r.fuel >= Utils.getSpecs(r, unitToBuild).CONSTRUCTION_FUEL;
+    }
+
+    public static BuildAction buildInRandomAdjacentSpace(MyRobot r, int unitToBuild) {
+        ArrayList<Point> freeSpaces = Utils.getAdjacentFreeSpaces(r);
+        Point move = freeSpaces.get((int) (Math.random() * freeSpaces.size()));
+        if (canBuild(r, unitToBuild)) {
+            return r.buildUnit(unitToBuild, move.x, move.y);
+        }
+        return null;
+    }
+
     public static Action moveMapThenRandom(MyRobot r, Navigation map, int radius) {
         Point delta = map.getNextMove(radius);
         if (Utils.canMove(r, delta)) {
@@ -116,18 +138,23 @@ public class Utils {
     }
 
     /*
-    Returns ArrayList of [dx, dy] of Units that are
+    Returns ArrayList of [dx, dy] of Units that are in range.
      */
-    public static ArrayList<Point> getUnitsInRange(MyRobot r, int unitType, boolean myTeam,  int minRadius, int maxRadius) {
+    public static ArrayList<Point> getUnitsInRange(MyRobot r, int unitType, boolean myTeam, int minRadiusSq, int maxRadiusSq) {
         ArrayList<Point> nearby = new ArrayList<>();
         for (Robot robot : r.getVisibleRobots()) {
-            if ((robot.unit != unitType && unitType != -1) || ((robot.team == r.me.team) == myTeam)) {
+            if (unitType != -1 && robot.unit != unitType) {
                 continue;
             }
+
+            if ((myTeam && (robot.team != r.me.team)) || (!myTeam && (robot.team == r.me.team))) {
+                continue;
+            }
+
             int distX = robot.x - r.me.x;
             int distY = robot.y - r.me.y;
             int distanceSquared = distX * distX + distY * distY;
-            if (distanceSquared >= minRadius * minRadius && distanceSquared <= maxRadius * maxRadius) {
+            if (distanceSquared >= minRadiusSq && distanceSquared <= maxRadiusSq) {
                 nearby.add(new Point(robot.x - r.me.x, robot.y - r.me.y));
             }
         }
@@ -165,25 +192,24 @@ public class Utils {
 
         int locX = rob.me.x;
         int locY = rob.me.y;
-        
+
         //Check for vertical symmetry
         boolean verticalSymmetry = true;
-        for (int c = 0; c<wid; c++){
-            for (int r = 0; r<=((int)(ht/2))+1; r++){
-            	
-                if (passableMap[r][c]!=passableMap[ht-r-1][c]){
+        for (int c = 0; c < wid; c++) {
+            for (int r = 0; r <= ht / 2 + 1; r++) {
+                if (passableMap[r][c] != passableMap[ht - r - 1][c]) {
                     verticalSymmetry = false;
                     break;
                 }
-                
+
             }
         }
-        if (verticalSymmetry){
-        	rob.log("Vertical Symmetry");
-        	return new Point(locX, ht-locY-1);
+        if (verticalSymmetry) {
+            rob.log("Vertical Symmetry");
+            return new Point(locX, ht - locY - 1);
         }
-    	rob.log("Horizontal Symmetry");
-    	return new Point(wid-locX-1, locY);
+        rob.log("Horizontal Symmetry");
+        return new Point(wid - locX - 1, locY);
         //return new Point(locX, locY);
     }
 
