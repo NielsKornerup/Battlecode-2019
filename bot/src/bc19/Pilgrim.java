@@ -73,11 +73,11 @@ public class Pilgrim implements BCRobot {
             computeMaps();
         }
 
-        if (r.karbonite >= Utils.getSpecs(r, r.SPECS.CHURCH).CONSTRUCTION_KARBONITE && r.fuel >= Utils.getSpecs(r, r.SPECS.CHURCH).CONSTRUCTION_FUEL) {
+        /*if (r.karbonite >= Utils.getSpecs(r, r.SPECS.CHURCH).CONSTRUCTION_KARBONITE && r.fuel >= Utils.getSpecs(r, r.SPECS.CHURCH).CONSTRUCTION_FUEL) {
             ArrayList<Point> freeSpaces = Utils.getAdjacentFreeSpaces(r);
             Point move = freeSpaces.get((int) (Math.random() * freeSpaces.size()));
             return r.buildUnit(r.SPECS.CHURCH, move.x, move.y);
-        }
+        }*/
 
         // TODO LOAD UP ON BOTH KARB AND FUEL BEFORE MOVING BACK
         if (state == State.GATHERING_KARB) {

@@ -36,8 +36,25 @@ public class Utils {
         return r.karbonite >= Utils.getSpecs(r, unitToBuild).CONSTRUCTION_KARBONITE && r.fuel >= Utils.getSpecs(r, unitToBuild).CONSTRUCTION_FUEL;
     }
 
+    public static AttackAction tryAndAttack(MyRobot r, int attackRadiusSq) {
+        ArrayList<Point> enemiesNearby = Utils.getUnitsInRange(r, -1, false, 0, attackRadiusSq);
+        if (enemiesNearby.size() > 0) {
+            // Attack an enemy at random
+            // TODO: smart targeting of enemies (prioritize Castles, etc and sort list)
+            for (Point attackPoint : enemiesNearby) {
+                if (Utils.canAttack(r, attackPoint.x, attackPoint.y)) {
+                    return r.attack(attackPoint.x, attackPoint.y);
+                }
+            }
+        }
+        return null;
+    }
+
     public static BuildAction buildInRandomAdjacentSpace(MyRobot r, int unitToBuild) {
         ArrayList<Point> freeSpaces = Utils.getAdjacentFreeSpaces(r);
+        if (freeSpaces.size() == 0) {
+            return null;
+        }
         Point move = freeSpaces.get((int) (Math.random() * freeSpaces.size()));
         if (canBuild(r, unitToBuild)) {
             return r.buildUnit(unitToBuild, move.x, move.y);
@@ -196,7 +213,7 @@ public class Utils {
         //Check for vertical symmetry
         boolean verticalSymmetry = true;
         for (int c = 0; c < wid; c++) {
-            for (int r = 0; r <= ht / 2 + 1; r++) {
+            for (int r = 0; r < ht / 2 + 1; r++) {
                 if (passableMap[r][c] != passableMap[ht - r - 1][c]) {
                     verticalSymmetry = false;
                     break;
@@ -205,12 +222,9 @@ public class Utils {
             }
         }
         if (verticalSymmetry) {
-            rob.log("Vertical Symmetry");
             return new Point(locX, ht - locY - 1);
         }
-        rob.log("Horizontal Symmetry");
         return new Point(wid - locX - 1, locY);
-        //return new Point(locX, locY);
     }
 
 }

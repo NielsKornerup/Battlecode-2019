@@ -1,5 +1,7 @@
 package bc19;
 
+import java.util.ArrayList;
+
 public class Castle implements BCRobot {
     private static final int MAX_INITIAL_PILGRIMS = 2;
     private static int initialPilgrimsBuilt = 0;
@@ -37,6 +39,13 @@ public class Castle implements BCRobot {
         if (action != null) {
             return action;
         }
+
+        // Finally, attack if there are enemies in range
+        AttackAction attackAction = Utils.tryAndAttack(r, Utils.mySpecs(r).ATTACK_RADIUS[1]);
+        if (attackAction != null) {
+            return attackAction;
+        }
+
         return null;
     }
 

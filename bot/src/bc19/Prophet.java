@@ -29,29 +29,19 @@ public class Prophet implements BCRobot {
             computeMaps();
         }
 
-        // Look around to see if there are enemies
-        ArrayList<Point> enemiesNearby = Utils.getUnitsInRange(r, -1, false, 0, Integer.MAX_VALUE);
-        if (enemiesNearby.size() > 0) {
-            r.log("Enemy nearby!");
+        // Attack enemies if nearby
+        AttackAction attackAction = Utils.tryAndAttack(r, Utils.mySpecs(r).ATTACK_RADIUS[1]);
+        if (attackAction != null) {
+            return attackAction;
+        }
 
-            // Attack an enemy at random
-            // TODO: smart targeting of enemies (prioritize Castles, etc and sort list)
-            for (Point attackPoint : enemiesNearby) {
-                if (Utils.canAttack(r, attackPoint.x, attackPoint.y)) {
-                    return r.attack(attackPoint.x, attackPoint.y);
-                }
-            }
-        } else {
-            // Do movement stuff.
-            // If there are a few friendly units nearby, then move a step towards the enemy.
-            int numFriendliesNearby = Utils.getUnitsInRange(r, -1, true, 0, Integer.MAX_VALUE).size();
-            // TODO: adjust this movement function to balance well between clumping and trickling.
-            double probabilityMoving = 1.0 / (1.0 + Math.exp(-(numFriendliesNearby - 4))); // Modified sigmoid function
-            if (Math.random() < probabilityMoving) {
-                return Utils.moveMapThenRandom(r, enemyCastleMap, 1);
-            } else {
-                // Stay put. Don't do anything because it wastes fuel lol.
-            }
+        // Do movement stuff.
+        // If there are a few friendly units nearby, then move a step towards the enemy.
+        int numFriendliesNearby = Utils.getUnitsInRange(r, -1, true, 0, Integer.MAX_VALUE).size();
+        // TODO: adjust this movement function to balance well between clumping and trickling.
+        double probabilityMoving = 1.0 / (1.0 + Math.exp(-(numFriendliesNearby - 4))); // Modified sigmoid function
+        if (Math.random() < probabilityMoving) {
+            return Utils.moveMapThenRandom(r, enemyCastleMap, 1);
         }
 
         return null;
