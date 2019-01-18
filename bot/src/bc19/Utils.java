@@ -139,12 +139,15 @@ public class Utils {
     }
 
     /*
-    Returns arraylist of [dx, dy] of Units that are directly adjacent
+    Returns arraylist of [dx, dy] of Units that are directly adjacent (i.e. in the 8 squares around the unit).
      */
-    public static ArrayList<Point> getAdjacentUnits(MyRobot r, int unitType) {
+    public static ArrayList<Point> getAdjacentUnits(MyRobot r, int unitType, boolean myTeam) {
         ArrayList<Point> nearby = new ArrayList<>();
         for (Robot robot : r.getVisibleRobots()) {
             if (robot.unit != unitType) {
+                continue;
+            }
+            if ((myTeam && (robot.team != r.me.team)) || (!myTeam && (robot.team == r.me.team))) {
                 continue;
             }
             if (Math.abs(robot.x - r.me.x) <= 1 && Math.abs(robot.y - r.me.y) <= 1) {

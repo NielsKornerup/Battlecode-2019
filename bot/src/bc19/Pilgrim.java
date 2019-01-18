@@ -67,24 +67,20 @@ public class Pilgrim {
             computeMaps(r);
         }
 
-        /*if (r.karbonite >= Utils.getSpecs(r, r.SPECS.CHURCH).CONSTRUCTION_KARBONITE && r.fuel >= Utils.getSpecs(r, r.SPECS.CHURCH).CONSTRUCTION_FUEL) {
-            ArrayList<Point> freeSpaces = Utils.getAdjacentFreeSpaces(r);
-            Point move = freeSpaces.get((int) (Math.random() * freeSpaces.size()));
-            return r.buildUnit(r.SPECS.CHURCH, move.x, move.y);
-        }*/
-
         // TODO LOAD UP ON BOTH KARB AND FUEL BEFORE MOVING BACK
+        // TODO ADJUST MOVEMENT SPEEDS TO BE MORE THAN RADIUS 1
         if (state == State.GATHERING_KARB) {
             // Check if on top of karbonite
             if (r.getKarboniteMap()[r.me.y][r.me.x]) {
-                // Check if Karbonite not filled up
+                // Check if we haven't loaded up on Karbonite
+                // TODO don't bother mining if we only need a tiny amount to fill up (like 1 karb)
                 if (r.me.karbonite < Utils.mySpecs(r).KARBONITE_CAPACITY) {
                     if (Utils.canMine(r)) {
                         // Harvest
                         return r.mine();
                     }
                 } else {
-                    // Start bringing resource home
+                    // Change state and move
                     state = State.MOVING_RESOURCE_HOME;
                     return act(r);
                 }
@@ -98,13 +94,14 @@ public class Pilgrim {
             // Check if on top of fuel
             if (r.getFuelMap()[r.me.y][r.me.x]) {
                 // Check if fuel not filled up
+                // TODO don't bother mining if we only need a tiny amount to fill up (like 1 fuel)
                 if (r.me.fuel < Utils.mySpecs(r).FUEL_CAPACITY) {
                     if (Utils.canMine(r)) {
                         // Harvest
                         return r.mine();
                     }
                 } else {
-                    // Start bringing resource home
+                    // Change state and move
                     state = State.MOVING_RESOURCE_HOME;
                     return act(r);
                 }
