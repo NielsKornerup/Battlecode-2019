@@ -68,7 +68,7 @@ public class Utils {
 
     public static Action moveDijkstra(MyRobot r, Navigation map, int radius) {
         Point delta = map.getNextMove(radius);
-        if (Utils.canMove(r, delta)) {
+        if (delta != null) {
             return r.move(delta.x, delta.y);
         }
         return null;

@@ -155,11 +155,7 @@ public class Navigation {
         for (Point delta : possibleDeltas) {
             int newX = start.x + delta.x;
             int newY = start.y + delta.y;
-            if (newX > -1 && newY > -1
-                    && newY < distances.length
-                    && newX < distances[newY].length
-                    && distances[newY][newX] < minDist
-                    && Utils.canMove(r, delta)) { // TODO optimize this
+            if (Utils.canMove(r, delta) && distances[newY][newX] < minDist) { // TODO optimize this
                 bestDelta = delta;
                 minDist = distances[newY][newX];
             }
