@@ -115,14 +115,16 @@ public class Pilgrim {
         }
 
         if (state == State.MOVING_RESOURCE_HOME) {
-            // Check if next to Castle
-            ArrayList<Point> adjacentCastles = Utils.getAdjacentUnits(r, r.SPECS.CASTLE);
-            if (adjacentCastles.size() > 0) {
-                // Check if Karbonite left
-                if (r.me.karbonite > 0) {
-                    // Drop off at Castle
-                    Point adjacentCastle = adjacentCastles.get(0);
-                    return r.give(adjacentCastle.x, adjacentCastle.y, r.me.karbonite, r.me.fuel);
+            // Check if next to Castles or churches
+            ArrayList<Point> adjacentPlacesToDeposit = Utils.getAdjacentUnits(r, r.SPECS.CASTLE, true);
+            adjacentPlacesToDeposit.addAll(Utils.getAdjacentUnits(r, r.SPECS.CHURCH, true));
+            if (adjacentPlacesToDeposit.size() > 0) {
+                // Check if Karbonite or Fuel left to drop off
+                // TODO don't bother dropping off if only have trivial amounts to give
+                if (r.me.karbonite > 0 || r.me.fuel > 0) {
+                    // Drop off at Castle/Church
+                    Point adjacentDeposit = adjacentPlacesToDeposit.get(0);
+                    return r.give(adjacentDeposit.x, adjacentDeposit.y, r.me.karbonite, r.me.fuel);
                 } else {
                     // Start going back to collect more resources. Pick weighted random between fuel and karb
                     state = Math.random() < .2 ? State.GATHERING_KARB : State.GATHERING_FUEL;
