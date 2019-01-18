@@ -86,7 +86,7 @@ public class Pilgrim {
                 }
             } else {
                 // Move towards Karbonite
-                return Utils.moveMapThenRandom(r, karbMap, 1);
+                return Utils.moveDijkstraThenRandom(r, karbMap, 1);
             }
         }
 
@@ -107,7 +107,7 @@ public class Pilgrim {
                 }
             } else {
                 // Move towards fuel
-                return Utils.moveMapThenRandom(r, fuelsMap, 1);
+                return Utils.moveDijkstraThenRandom(r, fuelsMap, 1);
             }
         }
 
@@ -129,7 +129,7 @@ public class Pilgrim {
                 }
             } else {
                 // Move towards nearby Castle
-                return Utils.moveMapThenRandom(r, castleMap, 1);
+                return Utils.moveDijkstraThenRandom(r, castleMap, 1);
             }
         }
 

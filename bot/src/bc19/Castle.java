@@ -5,7 +5,7 @@ public class Castle {
 
     public static Action act(MyRobot r) {
         // 1. Build our initial pilgrims if we haven't built them yet.
-        if (initialPilgrimsBuilt < Constants.MAX_CASTLE_INITIAL_PILGRIMS) {
+        if (initialPilgrimsBuilt < Constants.CASTLE_MAX_INITIAL_PILGRIMS) {
             BuildAction action = Utils.tryAndBuildInRandomSpace(r, r.SPECS.PILGRIM);
             if (action != null) {
                 initialPilgrimsBuilt++;

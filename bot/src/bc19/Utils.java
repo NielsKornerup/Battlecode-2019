@@ -5,10 +5,8 @@ import java.util.ArrayList;
 
 public class Utils {
 
-    private static final int PILGRIM_MINE_FUEL_COST = 1;
-
-    public static boolean canMove(MyRobot r, Point delta) {
-        // TODO need to reduce calls to these functions
+    public static boolean isNearbySpaceEmpty(MyRobot r, Point delta) {
+        // TODO: should reduce calls to these functions
         boolean[][] passableMap = r.getPassableMap();
         int[][] visibleRobotMap = r.getVisibleRobotMap();
         int newX = r.me.x + delta.x;
@@ -16,20 +14,26 @@ public class Utils {
         if (newX < 0 || newY < 0 || newY >= passableMap.length || newX >= passableMap[0].length) {
             return false;
         }
-        return passableMap[newY][newX] && (visibleRobotMap[newY][newX] <= 0) && enoughFuelToMove(r, delta.x, delta.y);
+        return passableMap[newY][newX] && (visibleRobotMap[newY][newX] <= 0);
+    }
+
+    public static boolean canMove(MyRobot r, Point delta) {
+         return isNearbySpaceEmpty(r, delta) && enoughFuelToMove(r, delta.x, delta.y);
     }
 
     public static boolean canMine(MyRobot r) {
-        return r.fuel >= PILGRIM_MINE_FUEL_COST;
+        return r.fuel >= Constants.PILGRIM_MINE_FUEL_COST;
     }
 
-    public static boolean canAttack(MyRobot r, int dx, int dy) {
-        if (r.me.unit == r.SPECS.PROPHET) {
-            if (dx * dx + dy * dy < Utils.mySpecs(r).ATTACK_RADIUS[0]) { // TODO should this be [0] or [1]?
-                return false;
-            }
-        }
-        return r.fuel >= Utils.mySpecs(r).ATTACK_FUEL_COST;
+    public static boolean canAttack(MyRobot r, Point delta) {
+        int dx = delta.x;
+        int dy = delta.y;
+        int rSquared = dx * dx + dy * dy;
+
+        return rSquared >= Utils.mySpecs(r).ATTACK_RADIUS[0]
+                && rSquared <= Utils.mySpecs(r).ATTACK_RADIUS[1]
+                && r.fuel >= Utils.mySpecs(r).ATTACK_FUEL_COST;
+
     }
 
     public static boolean canBuild(MyRobot r, int unitToBuild) {
@@ -42,7 +46,7 @@ public class Utils {
             // Attack an enemy at random
             // TODO: smart targeting of enemies (prioritize Castles, etc and sort list)
             for (Point attackPoint : enemiesNearby) {
-                if (Utils.canAttack(r, attackPoint.x, attackPoint.y)) {
+                if (Utils.canAttack(r, attackPoint)) {
                     return r.attack(attackPoint.x, attackPoint.y);
                 }
             }
@@ -55,19 +59,22 @@ public class Utils {
         if (freeSpaces.size() == 0) {
             return null;
         }
-        Point move = freeSpaces.get((int) (Math.random() * freeSpaces.size()));
+        Point location = freeSpaces.get((int) (Math.random() * freeSpaces.size()));
         if (canBuild(r, unitToBuild)) {
-            return r.buildUnit(unitToBuild, move.x, move.y);
+            return r.buildUnit(unitToBuild, location.x, location.y);
         }
         return null;
     }
 
-    public static Action moveMapThenRandom(MyRobot r, Navigation map, int radius) {
+    public static Action moveDijkstraThenRandom(MyRobot r, Navigation map, int radius) {
+        // TODO: this function will move randomly if it can't move according to the Dijkstra map. However, this isn't
+        // necessarily what we want to happen in all cases where this method is called. We should investigate where it's being
+        // called, and adjust accordingly.
         Point delta = map.getNextMove(radius);
         if (Utils.canMove(r, delta)) {
             return r.move(delta.x, delta.y);
         } else {
-            if (r.fuel > 5 * mySpecs(r).FUEL_PER_MOVE) {
+            if (r.fuel > 5 * mySpecs(r).FUEL_PER_MOVE) { // TODO: adjust this heuristic
                 return Utils.moveRandom(r);
             }
         }
@@ -91,6 +98,9 @@ public class Utils {
         while (candidates.size() > 0) {
             int index = (int) (Math.random() * candidates.size());
             Point move = candidates.get(index);
+
+            // TODO: a lot of this work overlaps with getFreeSpaces().
+            // This is a good place to start if we want to reduce method calls to getVisibleMap() and getPassableMap().
             if (canMove(r, move)) {
                 return r.move(move.x, move.y);
             }
@@ -106,32 +116,24 @@ public class Utils {
     }
 
     public static boolean enoughFuelToMove(MyRobot r, int dx, int dy) {
-        return getFuelCost(r, dx, dy) <= r.fuel;
+        return r.fuel >= getFuelCost(r, dx, dy);
     }
 
     /*
     Returns Point pairs of [dx, dy] that are empty (i.e. both passable and devoid of units) within a range.
     Range is NOT R SQUARED, it is just R.
      */
-    @SuppressWarnings("Duplicates")
     public static ArrayList<Point> getFreeSpaces(MyRobot r, int range) {
-        boolean[][] passableMap = r.getPassableMap();
-        int[][] visibleRobotMap = r.getVisibleRobotMap();
         ArrayList<Point> freeSpaces = new ArrayList<>();
-        int x = r.me.x;
-        int y = r.me.y;
         for (int dx = -range; dx <= range; dx++) {
             for (int dy = -range; dy <= range; dy++) {
                 if (dx * dx + dy * dy > range * range) {
                     continue;
                 }
-                int newX = x + dx;
-                int newY = y + dy;
-                if (newX < 0 || newY < 0 || newY >= passableMap.length || newX >= passableMap[0].length) {
-                    continue;
-                }
-                if (passableMap[newY][newX] && visibleRobotMap[newY][newX] <= 0) {
-                    freeSpaces.add(new Point(dx, dy));
+
+                Point delta = new Point(dx, dy);
+                if (isNearbySpaceEmpty(r, delta)) {
+                    freeSpaces.add(delta);
                 }
             }
         }
@@ -139,15 +141,18 @@ public class Utils {
     }
 
     /*
-    Returns arraylist of [dx, dy] of Units that are directly adjacent (i.e. in the 8 squares around the unit).
+    Returns Arraylist of [dx, dy] of Units that are directly adjacent (i.e. in the 8 squares around the unit).
      */
     public static ArrayList<Point> getAdjacentUnits(MyRobot r, int unitType, boolean myTeam) {
         ArrayList<Point> nearby = new ArrayList<>();
         for (Robot robot : r.getVisibleRobots()) {
-            if (robot.unit != unitType) {
+            if (unitType != -1 && robot.unit != unitType) {
                 continue;
             }
             if ((myTeam && (robot.team != r.me.team)) || (!myTeam && (robot.team == r.me.team))) {
+                continue;
+            }
+            if (robot.x == r.me.x && robot.y == r.me.y) {
                 continue;
             }
             if (Math.abs(robot.x - r.me.x) <= 1 && Math.abs(robot.y - r.me.y) <= 1) {
@@ -166,8 +171,10 @@ public class Utils {
             if (unitType != -1 && robot.unit != unitType) {
                 continue;
             }
-
             if ((myTeam && (robot.team != r.me.team)) || (!myTeam && (robot.team == r.me.team))) {
+                continue;
+            }
+            if (robot.x == r.me.x && robot.y == r.me.y) {
                 continue;
             }
 
@@ -183,29 +190,27 @@ public class Utils {
 
 
     /*
-    Returns Point pairs of [dx, dy] that are empty (i.e. both passable and devoid of units).
+    Returns Point pairs of [dx, dy] that are empty (i.e. both passable and devoid of units) and within the 8 squares surrounding us.
      */
     public static ArrayList<Point> getAdjacentFreeSpaces(MyRobot r) {
-        boolean[][] passableMap = r.getPassableMap();
-        int[][] visibleRobotMap = r.getVisibleRobotMap();
         ArrayList<Point> freeSpaces = new ArrayList<>();
-        int x = r.me.x;
-        int y = r.me.y;
         int[] dxes = {-1, 0, 1};
         int[] dyes = {-1, 0, 1};
         for (int dx : dxes) {
             for (int dy : dyes) {
-                int newX = x + dx;
-                int newY = y + dy;
-                if (passableMap[newY][newX] && visibleRobotMap[newY][newX] <= 0) {
-                    freeSpaces.add(new Point(dx, dy));
+                Point delta = new Point(dx, dy);
+                if (isNearbySpaceEmpty(r, delta)) {
+                    freeSpaces.add(delta);
                 }
             }
         }
         return freeSpaces;
     }
 
-    public static Point getMirroredCastle(MyRobot rob) {
+    /*
+    Determines if the map is horizontally or vertically mirrored, and returns the mirrored position of the current robot.
+     */
+    public static Point getMirroredPosition(MyRobot rob) {
         boolean[][] passableMap = rob.getPassableMap();
         int ht = passableMap.length;
         int wid = passableMap[0].length;
@@ -213,7 +218,7 @@ public class Utils {
         int locX = rob.me.x;
         int locY = rob.me.y;
 
-        //Check for vertical symmetry
+        // Check for vertical symmetry
         boolean verticalSymmetry = true;
         for (int c = 0; c < wid; c++) {
             for (int r = 0; r < ht / 2 + 1; r++) {

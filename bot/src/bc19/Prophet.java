@@ -12,7 +12,7 @@ public class Prophet {
         // we may need to remove this assumption at some point, especially if we're using
         //  Churches (since there are no guaranteed enemy counterparts to those)
         ArrayList<Point> targets = new ArrayList<>();
-        targets.add(Utils.getMirroredCastle(r));
+        targets.add(Utils.getMirroredPosition(r));
         enemyCastleMap = new Navigation(r, r.getPassableMap(), targets);
     }
 
@@ -40,7 +40,7 @@ public class Prophet {
         // TODO: add movement logic invalidating castles as targets if they have been destroyed
         // 2. Do movement stuff - approach the enemy.
         if (shouldMoveTowardsCastles(r)) {
-            return Utils.moveMapThenRandom(r, enemyCastleMap, 1);
+            return Utils.moveDijkstraThenRandom(r, enemyCastleMap, 1);
         }
 
         // TODO: add movement logic for exploring
