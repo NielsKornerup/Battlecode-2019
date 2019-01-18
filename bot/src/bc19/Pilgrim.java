@@ -16,6 +16,8 @@ public class Pilgrim {
         MOVING_RESOURCE_HOME,
     }
 
+    static State role = null;
+
     public static void computeKarbMap(MyRobot r) {
         boolean[][] karboniteMap = r.getKarboniteMap();
 
@@ -65,6 +67,13 @@ public class Pilgrim {
     public static Action act(MyRobot r) {
         if (r.turn == 1) {
             computeMaps(r);
+
+            if (Utils.getUnitsInRange(r, r.SPECS.PILGRIM, true, 0, Integer.MAX_VALUE).size() > 0) {
+                role = State.GATHERING_FUEL;
+            } else {
+                role = State.GATHERING_KARB;
+            }
+            state = role;
         }
 
         // TODO LOAD UP ON BOTH KARB AND FUEL BEFORE MOVING BACK
@@ -124,7 +133,8 @@ public class Pilgrim {
                     return r.give(adjacentDeposit.x, adjacentDeposit.y, r.me.karbonite, r.me.fuel);
                 } else {
                     // Start going back to collect more resources. Pick weighted random between fuel and karb
-                    state = Math.random() < .2 ? State.GATHERING_KARB : State.GATHERING_FUEL;
+                    //state = Math.random() < .2 ? State.GATHERING_KARB : State.GATHERING_FUEL;
+                    state = role;
                     return act(r);
                 }
             } else {

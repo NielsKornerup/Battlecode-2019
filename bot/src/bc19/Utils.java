@@ -5,6 +5,19 @@ import java.util.ArrayList;
 
 public class Utils {
 
+    public static Point findClosestPoint(MyRobot r, ArrayList<Point> points) {
+        Point bestPoint = null;
+        int bestDistance = 100000;
+        for (Point point : points) {
+            int newDistance = Math.abs(point.x - r.me.x) + Math.abs(point.y - r.me.y);
+            if (newDistance < bestDistance) {
+                bestDistance = newDistance;
+                bestPoint = point;
+            }
+        }
+        return bestPoint;
+    }
+
     public static boolean isNearbySpaceEmpty(MyRobot r, Point delta) {
         // TODO: should reduce calls to these functions
         boolean[][] passableMap = r.getPassableMap();
