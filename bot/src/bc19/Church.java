@@ -1,13 +1,8 @@
 package bc19;
 
-public class Church implements BCRobot {
-    MyRobot r;
+public class Church {
 
-    public Church(MyRobot myRobot) {
-        this.r = myRobot;
-    }
-
-    public Action act() {
+    public static Action act(MyRobot r) {
         return null;
     }
 

@@ -2,17 +2,11 @@ package bc19;
 
 import java.util.ArrayList;
 
-public class Prophet implements BCRobot {
-
-    MyRobot r;
+public class Prophet {
 
     private static Navigation enemyCastleMap;
 
-    public Prophet(MyRobot myRobot) {
-        this.r = myRobot;
-    }
-
-    public void computeMaps() {
+    public static void computeMaps(MyRobot r) {
         // We use our current castle location to infer the enemy's castle location. This is then used for Dijkstra map.
         // TODO: this means that a unit is not aware of all castles, which can be problematic.
         // TODO: we may need to remove this assumption at some point, especially if we're using
@@ -23,10 +17,10 @@ public class Prophet implements BCRobot {
     }
 
 
-    public Action act() {
+    public static Action act(MyRobot r) {
 
         if (r.turn == 1) {
-            computeMaps();
+            computeMaps(r);
         }
 
         // Attack enemies if nearby

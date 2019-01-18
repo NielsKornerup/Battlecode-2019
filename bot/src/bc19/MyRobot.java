@@ -4,26 +4,39 @@ public class MyRobot extends BCAbstractRobot {
 	public int turn;
 
 	public Action turn() {
-		doAllUnitActions();
+		doUnitPreTurnActions();
 
-		BCRobot robot = null;
+		Action actionToDo = null;
 		if (me.unit == SPECS.CASTLE) {
-		    robot = new Castle(this);
+		    actionToDo = Castle.act(this);
 		} else if (me.unit == SPECS.PILGRIM) {
-			robot = new Pilgrim(this);
+			actionToDo = Pilgrim.act(this);
 		} else if (me.unit == SPECS.CHURCH) {
-			robot = new Church(this);
+			actionToDo = Church.act(this);
 		} else if (me.unit == SPECS.CRUSADER) {
-		    //robot = new Crusader(this);
+			actionToDo = Crusader.act(this);
 		} else if (me.unit == SPECS.PROPHET) {
-			robot = new Prophet(this);
+			actionToDo = Prophet.act(this);
 		} else if (me.unit == SPECS.PREACHER) {
-			//robot = new Preacher(this);
+			actionToDo = Preacher.act(this);
 		}
-		return robot.act();
+
+		doUnitPostTurnActions();
+
+		return actionToDo;
 	}
 
-	private void doAllUnitActions() {
+	/*
+	Actions that the robot should do at the beginning of the turn, regardless of what unit type they are.
+	 */
+	private void doUnitPreTurnActions() {
 		turn++;
+	}
+
+	/*
+	Actions that the robot should do at the end of the turn, regardless of what unit type they are.
+	 */
+	private void doUnitPostTurnActions() {
+
 	}
 }

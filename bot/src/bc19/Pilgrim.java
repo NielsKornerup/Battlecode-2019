@@ -3,9 +3,7 @@ package bc19;
 import java.util.ArrayList;
 import java.util.List;
 
-public class Pilgrim implements BCRobot {
-
-    MyRobot r;
+public class Pilgrim {
 
     static Navigation karbMap;
     static Navigation fuelsMap;
@@ -18,11 +16,7 @@ public class Pilgrim implements BCRobot {
         MOVING_RESOURCE_HOME,
     }
 
-    public Pilgrim(MyRobot myRobot) {
-        this.r = myRobot;
-    }
-
-    public void computeKarbMap() {
+    public static void computeKarbMap(MyRobot r) {
         boolean[][] karboniteMap = r.getKarboniteMap();
 
         List<Point> targets = new ArrayList<>();
@@ -37,7 +31,7 @@ public class Pilgrim implements BCRobot {
         karbMap = new Navigation(r, r.getPassableMap(), targets);
     }
 
-    public void computeFuelMap() {
+    public static void computeFuelMap(MyRobot r) {
         boolean[][] fuelMap = r.getFuelMap();
 
         List<Point> targets = new ArrayList<>();
@@ -52,7 +46,7 @@ public class Pilgrim implements BCRobot {
         fuelsMap = new Navigation(r, r.getPassableMap(), targets);
     }
 
-    public void computeCastleMap() {
+    public static void computeCastleMap(MyRobot r) {
         List<Point> targets = new ArrayList<>();
         for (Robot robot : r.getVisibleRobots()) {
             if (robot.unit == r.SPECS.CASTLE || robot.unit == r.SPECS.CHURCH) {
@@ -62,15 +56,15 @@ public class Pilgrim implements BCRobot {
         castleMap = new Navigation(r, r.getPassableMap(), targets);
     }
 
-    public void computeMaps() {
-        computeKarbMap();
-        computeFuelMap();
-        computeCastleMap();
+    public static void computeMaps(MyRobot r) {
+        computeKarbMap(r);
+        computeFuelMap(r);
+        computeCastleMap(r);
     }
 
-    public Action act() {
+    public static Action act(MyRobot r) {
         if (r.turn == 1) {
-            computeMaps();
+            computeMaps(r);
         }
 
         /*if (r.karbonite >= Utils.getSpecs(r, r.SPECS.CHURCH).CONSTRUCTION_KARBONITE && r.fuel >= Utils.getSpecs(r, r.SPECS.CHURCH).CONSTRUCTION_FUEL) {
@@ -92,7 +86,7 @@ public class Pilgrim implements BCRobot {
                 } else {
                     // Start bringing resource home
                     state = State.MOVING_RESOURCE_HOME;
-                    return act();
+                    return act(r);
                 }
             } else {
                 // Move towards Karbonite
@@ -112,7 +106,7 @@ public class Pilgrim implements BCRobot {
                 } else {
                     // Start bringing resource home
                     state = State.MOVING_RESOURCE_HOME;
-                    return act();
+                    return act(r);
                 }
             } else {
                 // Move towards fuel
@@ -132,7 +126,7 @@ public class Pilgrim implements BCRobot {
                 } else {
                     // Start going back to collect more resources. Pick weighted random between fuel and karb
                     state = Math.random() < .2 ? State.GATHERING_KARB : State.GATHERING_FUEL;
-                    return act();
+                    return act(r);
                 }
             } else {
                 // Move towards nearby Castle

@@ -1,17 +1,11 @@
 package bc19;
 
-public class Castle implements BCRobot {
+public class Castle {
     private static final int MAX_INITIAL_PILGRIMS = 2;
     private static final int CASTLE_ATTACK_RADIUS = 64;
     private static int initialPilgrimsBuilt = 0;
 
-    MyRobot r;
-
-    public Castle(MyRobot myRobot) {
-        this.r = myRobot;
-    }
-
-    public Action act() {
+    public static Action act(MyRobot r) {
         // 1. Build our initial pilgrims
         if (initialPilgrimsBuilt < MAX_INITIAL_PILGRIMS) {
             BuildAction action = Utils.tryAndBuildInRandomSpace(r, r.SPECS.PILGRIM);
