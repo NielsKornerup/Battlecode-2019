@@ -12,9 +12,10 @@ public class Prophet {
         // we may need to remove this assumption at some point, especially if we're using
         //  Churches (since there are no guaranteed enemy counterparts to those)
         ArrayList<Point> targets = new ArrayList<>();
-        targets.add(Utils.getMirroredPosition(r));
+        targets.add(Utils.getMirroredPosition(r, new Point(r.me.x, r.me.y)));
         enemyCastleMap = new Navigation(r, r.getPassableMap(), targets);
     }
+
 
     private static boolean shouldMoveTowardsCastles(MyRobot r) {
         // If there are a few friendly units nearby, then move a step towards the enemy.

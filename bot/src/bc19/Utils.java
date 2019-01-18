@@ -66,18 +66,27 @@ public class Utils {
         return null;
     }
 
+    public static Action moveDijkstra(MyRobot r, Navigation map, int radius) {
+        Point delta = map.getNextMove(radius);
+        if (Utils.canMove(r, delta)) {
+            return r.move(delta.x, delta.y);
+        }
+        return null;
+    }
+
     public static Action moveDijkstraThenRandom(MyRobot r, Navigation map, int radius) {
         // TODO: this function will move randomly if it can't move according to the Dijkstra map. However, this isn't
         // necessarily what we want to happen in all cases where this method is called. We should investigate where it's being
         // called, and adjust accordingly.
-        Point delta = map.getNextMove(radius);
-        if (Utils.canMove(r, delta)) {
-            return r.move(delta.x, delta.y);
-        } else {
-            if (r.fuel > 5 * mySpecs(r).FUEL_PER_MOVE) { // TODO: adjust this heuristic
-                return Utils.moveRandom(r);
-            }
+        Action action = moveDijkstra(r, map, radius);
+        if (action != null) {
+            return action;
         }
+
+        if (r.fuel > 5 * mySpecs(r).FUEL_PER_MOVE) { // TODO: adjust this heuristic
+            return Utils.moveRandom(r);
+        }
+
         return null;
     }
 
@@ -138,6 +147,14 @@ public class Utils {
             }
         }
         return freeSpaces;
+    }
+
+    public static boolean isOn(MyRobot r, Point other) {
+        return r.me.x == other.x && r.me.y == other.y;
+    }
+
+    public static boolean isAdjacentOrOn(MyRobot r, Point other) {
+        return Math.abs(r.me.x - other.x) <= 1 && Math.abs(r.me.y - other.y) <= 1;
     }
 
     /*
@@ -210,13 +227,13 @@ public class Utils {
     /*
     Determines if the map is horizontally or vertically mirrored, and returns the mirrored position of the current robot.
      */
-    public static Point getMirroredPosition(MyRobot rob) {
+    public static Point getMirroredPosition(MyRobot rob, Point position) {
         boolean[][] passableMap = rob.getPassableMap();
         int ht = passableMap.length;
         int wid = passableMap[0].length;
 
-        int locX = rob.me.x;
-        int locY = rob.me.y;
+        int locX = position.x;
+        int locY = position.y;
 
         // Check for vertical symmetry
         boolean verticalSymmetry = true;
