@@ -8,8 +8,6 @@ public class Prophet {
     private static Point ringTarget = null;
     private static final int RING_START = 3;
     private static final int MAX_RING_LEVEL = 8;
-    private static final int ATTACK_SIGNAL = 65532;
-    private static final int ATTACK_SIGNAL_RADIUS_SQ = 5;
     private static int ring = RING_START;
 
     public enum State {
@@ -34,18 +32,9 @@ public class Prophet {
         }
     }
 
-    private static boolean receivedBumpSignal(MyRobot r) {
-        for (Robot robot : r.getVisibleRobots()) {
-            if (robot.signal == r.id) {
-                return true;
-            }
-        }
-        return false;
-    }
-
     private static Action beginAttack(MyRobot r) {
-        if (Utils.canSignal(r, ATTACK_SIGNAL_RADIUS_SQ)) {
-            r.signal(ATTACK_SIGNAL, ATTACK_SIGNAL_RADIUS_SQ);
+        if (Utils.canSignal(r, 2)) { // TODO hardcoded
+            CommunicationUtils.sendAttackMessage(r);
             state = State.ATTACKING;
             return act(r);
         }
@@ -53,11 +42,12 @@ public class Prophet {
     }
 
     private static Action ringFormation(MyRobot r) {
-        if (receivedBumpSignal(r) && Utils.isOn(r, ringTarget)) {
+        if (CommunicationUtils.receivedBumpMessage(r) && Utils.isOn(r, ringTarget)) {
             if (ring >= MAX_RING_LEVEL) {
                 return beginAttack(r);
             }
             ring++;
+            r.log("Received bump request to level " + ring);
             ringTarget = null;
         }
 
@@ -77,10 +67,7 @@ public class Prophet {
         if (Utils.isAdjacentOrOn(r, ringTarget) && !Utils.isOn(r, ringTarget) && visibleMap[ringTarget.y][ringTarget.x] > 0) {
             // Emit bump request TODO ignore enemies
             // Send out the ID of the robot that's sitting on our square
-            if (Utils.canSignal(r, 2)) {
-                int id = r.getVisibleRobotMap()[ringTarget.y][ringTarget.x];
-                r.signal(id, 2);
-            }
+            CommunicationUtils.sendBumpMessage(r, r.getVisibleRobotMap()[ringTarget.y][ringTarget.x]);
             return null;
         }
 
@@ -110,15 +97,6 @@ public class Prophet {
         return Math.random() < probabilityMoving;
     }
 
-    private static boolean receivedAttackSignal(MyRobot r) {
-        for (Robot robot : r.getVisibleRobots()) {
-            if (robot.signal == ATTACK_SIGNAL) {
-                return true;
-            }
-        }
-        return false;
-    }
-
     private static void doFirstTurnActions(MyRobot r) {
         computeMaps(r);
         initialCastleLocation = Utils.getCastleLocation(r);
@@ -139,7 +117,8 @@ public class Prophet {
 
         // 2. Do either turtling or attacking actions
         if (state == State.TURTLING) {
-            if (receivedAttackSignal(r)) {
+            if (CommunicationUtils.receivedAttackMessage(r)) {
+                r.log("Received attack message");
                 return beginAttack(r);
             }
             return ringFormation(r);

@@ -1,5 +1,4 @@
 package bc19;
-import java.util.Comparator;
 
 public class RobotSort implements Comparable<RobotSort> {
 	
@@ -25,26 +24,26 @@ public class RobotSort implements Comparable<RobotSort> {
 	
 	/*
 	 * Priority List in order of importance
-	 * Preacher (5)
-	 * Prophet (4)
-	 * Crusader (3)
-	 * Castle (0)
-	 * Church (1)
-	 * Pilgrim (2)
+	 * Preacher
+	 * Prophet
+	 * Crusader
+	 * Castle
+	 * Church
+	 * Pilgrim
 	*/
 	
 	public static int getPriority(int type){
-		if (type==5)
+		if (type == Constants.PREACHER_UNIT_TYPE)
 			return 0;
-		if (type==4)
+		if (type == Constants.PROPHET_UNIT_TYPE)
 			return 1;
-		if (type==3)
+		if (type == Constants.CRUSADER_UNIT_TYPE)
 			return 2;
-		if (type==0)
+		if (type == Constants.CASTLE_UNIT_TYPE)
 			return 3;
-		if (type==1)
+		if (type == Constants.CHURCH_UNIT_TYPE)
 			return 4;
-		if (type==2)
+		if (type == Constants.PILGRIM_UNIT_TYPE)
 			return 5;
 		
 		return -1;

@@ -13,7 +13,8 @@ public class Castle {
     private static int numKarbWorkers=0;
     private static HashMap<Integer, Point> pilgrimToTarget = new HashMap<>();
     private static ArrayList<Point> targets = new ArrayList<>();
-   
+
+    private static HashMap<Integer, Point> castleLocations = new HashMap<>(); // Maps from unit ID to location
     
     private static void populateTargets(MyRobot r) {
     	ArrayList<Point> mySpot = new ArrayList<>();
@@ -76,10 +77,49 @@ public class Castle {
         return targets;
     }
 
+    public static void getOtherCastleLocations(MyRobot r) {
+        if (r.turn == 1) {
+            // Add our own location to the HashMap
+            castleLocations.put(r.me.id, new Point(r.me.x, r.me.y));
+
+            // Send our X coordinate
+            CastleTalkUtils.sendCastleCoord(r, r.me.x);
+        } else if (r.turn == 2) {
+            // Add X coordinates received from other castles
+            for (Robot robot : r.getVisibleRobots()) {
+                // TODO this assumes that only castles are broadcasting with castle talk on the first 3 turns. Something to keep in mind
+                int castleCoordX = CastleTalkUtils.getCastleCoord(r, robot);
+                if (castleCoordX != -1) {
+                    // Put the X in our HashMap
+                    castleLocations.put(robot.id, new Point(castleCoordX, 0));
+                }
+            }
+
+            // Send our Y coordinate
+            CastleTalkUtils.sendCastleCoord(r, r.me.y);
+        } else if (r.turn == 3) {
+            // Add Y coordinates received from other castles
+            for (Robot robot : r.getVisibleRobots()) {
+                int castleCoordY = CastleTalkUtils.getCastleCoord(r, robot);
+                if (castleCoordY != -1) {
+                    // Put the Y in our HashMap
+                    Point point = castleLocations.get(robot.id);
+                    castleLocations.put(robot.id, new Point(point.x, castleCoordY));
+                }
+            }
+        } else if (r.turn == 4) {
+            for (Integer key : castleLocations.keySet()) {
+                r.log(key + " " + castleLocations.get(key).x + " " + castleLocations.get(key).y);
+            }
+        }
+    }
+
     public static Action act(MyRobot r) {
     	if(r.turn == 1) {
     		populateTargets(r);
     	}
+
+    	//getOtherCastleLocations(r);
     	
     	//TODO: code this constant for the max range
     	List<Robot> robots = Utils.getRobotsInRange(r, r.SPECS.PILGRIM, true, 0, 5);
@@ -108,7 +148,7 @@ public class Castle {
     	
         // 1. Build our initial pilgrims if we haven't built them yet.
         if (initialPilgrimsBuilt < Constants.CASTLE_MAX_INITIAL_PILGRIMS) {
-            CommunicationUtils.sendPilgrimInfo(r, targets.get(0), 3);
+            CommunicationUtils.sendPilgrimInfoMessage(r, targets.get(0), 3);
         	BuildAction action = Utils.tryAndBuildInRandomSpace(r, r.SPECS.PILGRIM);
             if (action != null) {
                 initialPilgrimsBuilt++;
