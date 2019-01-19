@@ -33,9 +33,12 @@ public class Prophet {
     }
 
     private static Action beginAttack(MyRobot r) {
-        CommunicationUtils.sendAttackMessage(r);
-        state = State.ATTACKING;
-        return act(r);
+        if (Utils.canSignal(r, 2)) { // TODO hardcoded
+            CommunicationUtils.sendAttackMessage(r);
+            state = State.ATTACKING;
+            return act(r);
+        }
+        return null;
     }
 
     private static Action ringFormation(MyRobot r) {

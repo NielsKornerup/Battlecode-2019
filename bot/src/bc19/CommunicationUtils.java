@@ -17,8 +17,6 @@ public class CommunicationUtils {
 	private static void sendBroadcast(MyRobot r, short message, int radiusSq) {
 		if (Utils.canSignal(r, radiusSq)) {
 			r.signal(message, radiusSq);
-		} else {
-			r.log("Not enough fuel for " + r.me.id + " to signal with radius " + radiusSq);
 		}
 	}
 
