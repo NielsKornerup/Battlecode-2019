@@ -19,33 +19,11 @@ public class Prophet {
 
     private static State state = State.TURTLING;
 
-
     private static Navigation ringMap;
     private static Navigation enemyCastleMap;
 
-    public static HashMap<Integer, ArrayList<Point>> generateRingLocations(MyRobot r, Point center) {
-        // Get opposite castle location
-        Point opposite = Utils.getMirroredPosition(r, center);
-
-        HashMap<Integer, ArrayList<Point>> ringLocations = new HashMap<>();
-        boolean[][] passableMap = r.getPassableMap();
-
-        for (int y = 0; y < passableMap.length; y++) {
-            for (int x = 0; x < passableMap[y].length; x++) {
-                if (!passableMap[y][x] || !Utils.isBetween(center, opposite, new Point(x, y))) {
-                    continue;
-                }
-                double dx = x - center.x;
-                double dy = y - center.y;
-                int distance = (int) Math.sqrt(dx * dx + dy * dy);
-                if (!ringLocations.containsKey(distance)) {
-                    ringLocations.put(distance, new ArrayList<>());
-                }
-                ringLocations.get(distance).add(new Point(x, y));
-            }
-        }
-        return ringLocations;
-    }
+    private static Point initialCastleLocation;
+    private static Point enemyCastleLocation;
 
     private static Point pickRingTarget(MyRobot r) {
         ArrayList<Point> pointsInRing = ringLocations.get(ring);
@@ -66,9 +44,12 @@ public class Prophet {
     }
 
     private static Action beginAttack(MyRobot r) {
-        r.signal(ATTACK_SIGNAL, ATTACK_SIGNAL_RADIUS_SQ);
-        state = State.ATTACKING;
-        return act(r);
+        if (Utils.canSignal(r, ATTACK_SIGNAL_RADIUS_SQ)) {
+            r.signal(ATTACK_SIGNAL, ATTACK_SIGNAL_RADIUS_SQ);
+            state = State.ATTACKING;
+            return act(r);
+        }
+        return null;
     }
 
     private static Action ringFormation(MyRobot r) {
@@ -77,7 +58,6 @@ public class Prophet {
                 return beginAttack(r);
             }
             ring++;
-            r.log("Bumping up ring level to " + ring);
             ringTarget = null;
         }
 
@@ -87,22 +67,24 @@ public class Prophet {
             if (ringTarget == null) {
                 return null;
             }
-        }
 
-        ArrayList<Point> targets = new ArrayList<>();
-        targets.add(ringTarget);
-        ringMap = new Navigation(r, r.getPassableMap(), targets);
+            ArrayList<Point> targets = new ArrayList<>();
+            targets.add(ringTarget);
+            ringMap = new Navigation(r, r.getPassableMap(), targets);
+        }
 
         int[][] visibleMap = r.getVisibleRobotMap();
         if (Utils.isAdjacentOrOn(r, ringTarget) && !Utils.isOn(r, ringTarget) && visibleMap[ringTarget.y][ringTarget.x] > 0) {
             // Emit bump request TODO ignore enemies
             // Send out the ID of the robot that's sitting on our square
-            int id = r.getVisibleRobotMap()[ringTarget.y][ringTarget.x];
-            r.signal(id, 2);
+            if (Utils.canSignal(r, 2)) {
+                int id = r.getVisibleRobotMap()[ringTarget.y][ringTarget.x];
+                r.signal(id, 2);
+            }
             return null;
         }
 
-        if (!Utils.isOn(r, ringTarget)) {
+        if (!Utils.isOn(r, ringTarget) && ringMap != null) {
             return Utils.moveDijkstra(r, ringMap, 1);
         }
 
@@ -110,7 +92,7 @@ public class Prophet {
     }
 
 
-    public static void computeMaps(MyRobot r) {
+    private static void computeMaps(MyRobot r) {
         // We use our current castle location to infer the enemy's castle location. This is then used for Dijkstra map.
         // TODO: this means that a unit is not aware of all castles, which can be problematic.
         // we may need to remove this assumption at some point, especially if we're using
@@ -137,15 +119,16 @@ public class Prophet {
         return false;
     }
 
+    private static void doFirstTurnActions(MyRobot r) {
+        computeMaps(r);
+        initialCastleLocation = Utils.getCastleLocation(r);
+        enemyCastleLocation = Utils.getMirroredPosition(r, initialCastleLocation);
+        ringLocations = Utils.generateRingLocations(r, initialCastleLocation, enemyCastleLocation);
+    }
+
     public static Action act(MyRobot r) {
         if (r.turn == 1) {
-            computeMaps(r);
-
-            // Store initial Castle location
-            // TODO make work with Churches too
-            Point initialCastleDelta = Utils.getAdjacentUnits(r, r.SPECS.CASTLE, true).get(0);
-            Point initialCastleLocation = new Point(r.me.x + initialCastleDelta.x, r.me.y + initialCastleDelta.y);
-            ringLocations = generateRingLocations(r, initialCastleLocation);
+            doFirstTurnActions(r);
         }
 
         // 1. Attack enemies if nearby
@@ -154,6 +137,7 @@ public class Prophet {
             return attackAction;
         }
 
+        // 2. Do either turtling or attacking actions
         if (state == State.TURTLING) {
             if (receivedAttackSignal(r)) {
                 return beginAttack(r);
@@ -162,8 +146,8 @@ public class Prophet {
         } else if (state == State.ATTACKING) {
             // TODO: add movement logic invalidating castles as targets if they have been destroyed
             // Approach the enemy.
-            return Utils.moveDijkstraThenRandom(r, enemyCastleMap, 1);
             // TODO: add movement logic for exploring
+            return Utils.moveDijkstraThenRandom(r, enemyCastleMap, 1);
         }
 
         return null;

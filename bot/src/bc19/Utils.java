@@ -1,6 +1,7 @@
 package bc19;
 
 import java.util.ArrayList;
+import java.util.HashMap;
 
 
 public class Utils {
@@ -47,6 +48,10 @@ public class Utils {
                 && rSquared <= Utils.mySpecs(r).ATTACK_RADIUS[1]
                 && r.fuel >= Utils.mySpecs(r).ATTACK_FUEL_COST;
 
+    }
+
+    public static boolean canSignal(MyRobot r, int radiusSq) {
+        return r.fuel >= Math.ceil(Math.sqrt(radiusSq));
     }
 
     public static boolean canBuild(MyRobot r, int unitToBuild) {
@@ -267,6 +272,34 @@ public class Utils {
             return new Point(locX, ht - locY - 1);
         }
         return new Point(wid - locX - 1, locY);
+    }
+
+    public static HashMap<Integer, ArrayList<Point>> generateRingLocations(MyRobot r, Point castle, Point enemyCastle) {
+        HashMap<Integer, ArrayList<Point>> ringLocations = new HashMap<>();
+        boolean[][] passableMap = r.getPassableMap();
+
+        for (int y = 0; y < passableMap.length; y++) {
+            for (int x = 0; x < passableMap[y].length; x++) {
+                if (!passableMap[y][x] || !Utils.isBetween(castle, enemyCastle, new Point(x, y))) {
+                    continue;
+                }
+                double dx = x - castle.x;
+                double dy = y - castle.y;
+                int distance = (int) Math.sqrt(dx * dx + dy * dy);
+                if (!ringLocations.containsKey(distance)) {
+                    ringLocations.put(distance, new ArrayList<>());
+                }
+                ringLocations.get(distance).add(new Point(x, y));
+            }
+        }
+        return ringLocations;
+    }
+
+    // Must be called immediately after spawning to work
+    public static Point getCastleLocation(MyRobot r) {
+        // TODO make work with Churches too
+        Point initialCastleDelta = Utils.getAdjacentUnits(r, r.SPECS.CASTLE, true).get(0);
+        return new Point(r.me.x + initialCastleDelta.x, r.me.y + initialCastleDelta.y);
     }
 
 }
