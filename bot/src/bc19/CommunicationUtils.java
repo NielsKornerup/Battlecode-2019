@@ -41,8 +41,7 @@ public class CommunicationUtils {
 	public static boolean receivedAttackMessage(MyRobot r) {
 		for (Robot other : r.getVisibleRobots()) {
 			if (r.isRadioing(other)
-					&& instructionMatches(PROPHET_ATTACK_MASK, (short) other.signal)
-					&& argumentMatches((short) r.id, other.signal)) {
+					&& instructionMatches(PROPHET_ATTACK_MASK, (short) other.signal)) {
 				return true;
 			}
 		}
@@ -50,13 +49,14 @@ public class CommunicationUtils {
 	}
 
 	public static void sendBumpMessage(MyRobot r, int unitId) {
-		short message = (short) (PROPHET_BUMP_MASK & ((short) unitId));
+		short message = (short) (PROPHET_BUMP_MASK | ((short) unitId));
 		sendBroadcast(r, message, BUMP_SIGNAL_RADIUS_SQ);
 	}
 
 	public static boolean receivedBumpMessage(MyRobot r) {
 		for (Robot other : r.getVisibleRobots()) {
-			if (r.isRadioing(other) && instructionMatches(PROPHET_BUMP_MASK, (short) other.signal)) {
+			if (r.isRadioing(other) && instructionMatches(PROPHET_BUMP_MASK, (short) other.signal)
+					&& argumentMatches((short) r.id, other.signal)) {
 				return true;
 			}
 		}
@@ -64,7 +64,7 @@ public class CommunicationUtils {
 	}
 
 	public static void sendPilgrimInfoMessage(MyRobot r, Point target, int range) {
-		short message = (short) (PILGRIM_TARGET_MASK + (target.x << 6) + target.y);
+		short message = (short) (PILGRIM_TARGET_MASK | ((short) target.x << 6) | ((short) target.y));
 		sendBroadcast(r, message, range);
 	}
 
