@@ -187,4 +187,8 @@ public class Navigation {
     public List<Point> getTargets() {
         return targets;
     }
+    
+    public int getPotential(Point target) {
+    	return distances[target.y][target.x];
+    }
 }

@@ -1,6 +1,7 @@
 package bc19;
 
 import java.util.ArrayList;
+import java.util.List;
 
 
 public class Utils {
@@ -195,6 +196,28 @@ public class Utils {
         }
         return nearby;
     }
+    
+    /*
+    Returns Arraylist of Robots that are directly adjacent (i.e. in the 8 squares around the unit).
+     */
+    public static ArrayList<Robot> getAdjacentRobots(MyRobot r, int unitType, boolean myTeam) {
+        ArrayList<Robot> nearby = new ArrayList<>();
+        for (Robot robot : r.getVisibleRobots()) {
+            if (unitType != -1 && robot.unit != unitType) {
+                continue;
+            }
+            if ((myTeam && (robot.team != r.me.team)) || (!myTeam && (robot.team == r.me.team))) {
+                continue;
+            }
+            if (robot.x == r.me.x && robot.y == r.me.y) {
+                continue;
+            }
+            if (Math.abs(robot.x - r.me.x) <= 1 && Math.abs(robot.y - r.me.y) <= 1) {
+                nearby.add(robot);
+            }
+        }
+        return nearby;
+    }
 
     /*
     Returns ArrayList of [dx, dy] of Units that are in range.
@@ -268,5 +291,37 @@ public class Utils {
         }
         return new Point(wid - locX - 1, locY);
     }
+    
+    public static int computeSquareDistance(Point p1, Point p2) {
+    	return (p1.x-p2.x)*(p1.x-p2.x) + (p1.y-p2.y)*(p1.y-p2.y); 
+    }
+    
+    public static Point getLocation(Robot r) {
+    	return new Point(r.x, r.y);
+    }
+
+	public static List<Robot> getRobotsInRange(MyRobot r, int unitType, boolean myTeam, int minRadiusSq, int maxRadiusSq) {
+        ArrayList<Robot> nearby = new ArrayList<>();
+        for (Robot robot : r.getVisibleRobots()) {
+            if (unitType != -1 && robot.unit != unitType) {
+                continue;
+            }
+            if ((myTeam && (robot.team != r.me.team)) || (!myTeam && (robot.team == r.me.team))) {
+                continue;
+            }
+            if (robot.x == r.me.x && robot.y == r.me.y) {
+                continue;
+            }
+
+            int distX = robot.x - r.me.x;
+            int distY = robot.y - r.me.y;
+            int distanceSquared = distX * distX + distY * distY;
+            if (distanceSquared >= minRadiusSq && distanceSquared <= maxRadiusSq) {
+                nearby.add(robot);
+            }
+        }
+        return nearby;
+		
+	}
 
 }

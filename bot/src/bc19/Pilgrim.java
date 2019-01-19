@@ -5,47 +5,13 @@ import java.util.List;
 
 public class Pilgrim {
 
-    static Navigation karbMap;
-    static Navigation fuelsMap;
+    static Navigation targetMap;
     static Navigation castleMap;
-    static State state = Math.random() < .5 ? State.GATHERING_KARB : State.GATHERING_FUEL;
+    static State state = State.GATHERING;
 
     public enum State {
-        GATHERING_KARB,
-        GATHERING_FUEL,
-        MOVING_RESOURCE_HOME,
-    }
-
-    static State role = null;
-
-    public static void computeKarbMap(MyRobot r) {
-        boolean[][] karboniteMap = r.getKarboniteMap();
-
-        List<Point> targets = new ArrayList<>();
-        for (int y = 0; y < karboniteMap.length; y++) {
-            for (int x = 0; x < karboniteMap[y].length; x++) {
-                if (karboniteMap[y][x]) {
-                    targets.add(new Point(x, y));
-                }
-            }
-        }
-
-        karbMap = new Navigation(r, r.getPassableMap(), targets);
-    }
-
-    public static void computeFuelMap(MyRobot r) {
-        boolean[][] fuelMap = r.getFuelMap();
-
-        List<Point> targets = new ArrayList<>();
-        for (int y = 0; y < fuelMap.length; y++) {
-            for (int x = 0; x < fuelMap[y].length; x++) {
-                if (fuelMap[y][x]) {
-                    targets.add(new Point(x, y));
-                }
-            }
-        }
-
-        fuelsMap = new Navigation(r, r.getPassableMap(), targets);
+        GATHERING,
+        MOVING_RESOURCE_HOME
     }
 
     public static void computeCastleMap(MyRobot r) {
@@ -57,33 +23,43 @@ public class Pilgrim {
         }
         castleMap = new Navigation(r, r.getPassableMap(), targets);
     }
+    
+    public static void computeTargetMap(MyRobot r, Point target) {
+    	List<Point> targetList = new ArrayList<>();
+    	targetList.add(target);
+    	
+    	//TODO: fix cannot read property 'y' of null caused by this
+    	if(target == null) {
+    		r.log("cannot get target from castle because castle is dead");
+    	}
+    	targetMap = new Navigation(r, r.getPassableMap(), targetList);
+    }
 
-    public static void computeMaps(MyRobot r) {
-        computeKarbMap(r);
-        computeFuelMap(r);
+    public static void computeMaps(MyRobot r, Point target) {
+    	computeTargetMap(r, target);
         computeCastleMap(r);
     }
 
     public static Action act(MyRobot r) {
         if (r.turn == 1) {
-            computeMaps(r);
-
-            if (Utils.getUnitsInRange(r, r.SPECS.PILGRIM, true, 0, Integer.MAX_VALUE).size() > 0) {
-                role = State.GATHERING_FUEL;
-            } else {
-                role = State.GATHERING_KARB;
-            }
-            state = role;
+        	ArrayList<Robot> adjacentCastles = Utils.getAdjacentRobots(r, r.SPECS.CASTLE, true);
+        	//TODO: what if there are multiple adj castles? (unlikely)
+        	Point target = CommunicationUtils.getPilgrimTargetInfo(r, adjacentCastles.get(0));
+            computeMaps(r, target);
+            state = State.GATHERING;
+            
+            //TODO: Make sure we don't go out of range. That could cause a bug.
+            CommunicationUtils.sendPilgrimInfoToCastle(r, target, 5);
         }
-
+        
         // TODO LOAD UP ON BOTH KARB AND FUEL BEFORE MOVING BACK
         // TODO ADJUST MOVEMENT SPEEDS TO BE MORE THAN RADIUS 1
-        if (state == State.GATHERING_KARB) {
-            // Check if on top of karbonite
-            if (r.getKarboniteMap()[r.me.y][r.me.x]) {
-                // Check if we haven't loaded up on Karbonite
+        if (state == State.GATHERING) {
+            // Check if we are at the destination
+            if (targetMap.getPotential(Utils.getLocation(r.me)) == 0) {
+                // Check if we haven't loaded up on resources
                 // TODO don't bother mining if we only need a tiny amount to fill up (like 1 karb)
-                if (r.me.karbonite < Utils.mySpecs(r).KARBONITE_CAPACITY) {
+                if (r.me.karbonite < Utils.mySpecs(r).KARBONITE_CAPACITY && r.me.fuel < Utils.mySpecs(r).FUEL_CAPACITY) {
                     if (Utils.canMine(r)) {
                         // Harvest
                         return r.mine();
@@ -95,28 +71,7 @@ public class Pilgrim {
                 }
             } else {
                 // Move towards Karbonite
-                return Utils.moveDijkstraThenRandom(r, karbMap, 1);
-            }
-        }
-
-        if (state == State.GATHERING_FUEL) {
-            // Check if on top of fuel
-            if (r.getFuelMap()[r.me.y][r.me.x]) {
-                // Check if fuel not filled up
-                // TODO don't bother mining if we only need a tiny amount to fill up (like 1 fuel)
-                if (r.me.fuel < Utils.mySpecs(r).FUEL_CAPACITY) {
-                    if (Utils.canMine(r)) {
-                        // Harvest
-                        return r.mine();
-                    }
-                } else {
-                    // Change state and move
-                    state = State.MOVING_RESOURCE_HOME;
-                    return act(r);
-                }
-            } else {
-                // Move towards fuel
-                return Utils.moveDijkstraThenRandom(r, fuelsMap, 1);
+                return Utils.moveDijkstraThenRandom(r, targetMap, 2);
             }
         }
 
@@ -132,14 +87,12 @@ public class Pilgrim {
                     Point adjacentDeposit = adjacentPlacesToDeposit.get(0);
                     return r.give(adjacentDeposit.x, adjacentDeposit.y, r.me.karbonite, r.me.fuel);
                 } else {
-                    // Start going back to collect more resources. Pick weighted random between fuel and karb
-                    //state = Math.random() < .2 ? State.GATHERING_KARB : State.GATHERING_FUEL;
-                    state = role;
+                    state = State.GATHERING;
                     return act(r);
                 }
             } else {
                 // Move towards nearby Castle
-                return Utils.moveDijkstraThenRandom(r, castleMap, 1);
+                return Utils.moveDijkstraThenRandom(r, castleMap, 2);
             }
         }
 

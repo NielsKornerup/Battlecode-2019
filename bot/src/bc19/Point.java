@@ -21,4 +21,8 @@ public class Point implements Comparable<Point> {
     public int compareTo(Point point) {
         return 0;
     }
+    
+    public String toString() {
+    	return "("+x+", "+y+")";
+    }
 }
