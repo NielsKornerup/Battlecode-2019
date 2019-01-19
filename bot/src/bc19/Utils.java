@@ -250,6 +250,27 @@ public class Utils {
         }
         return freeSpaces;
     }
+    
+    public static boolean hasResource(MyRobot r, Point loc) {
+    	return r.karboniteMap[loc.y][loc.x] || r.fuelMap[loc.y][loc.x];
+    }
+    
+    public static int getAdjacentResourceCount(MyRobot r, Point p) {
+        int[] dxes = {-1, 0, 1};
+        int[] dyes = {-1, 0, 1};
+        int count = 0;
+        for (int dx : dxes) {
+            for (int dy : dyes) {
+            	if(dx==0 && dy==0) {
+            		continue;
+            	}
+            	if(hasResource(r, new Point(r.me.x + dx, r.me.y + dy))) {
+            		count++;
+            	}
+            }
+        }
+        return count;
+    }
 
     /*
     Determines if the map is horizontally or vertically mirrored, and returns the mirrored position of the current robot.

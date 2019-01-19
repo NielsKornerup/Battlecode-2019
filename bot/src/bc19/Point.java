@@ -19,7 +19,25 @@ public class Point implements Comparable<Point> {
 
     @Override
     public int compareTo(Point point) {
-        return 0;
+        if(x>point.x) {
+        	return 1;
+        }
+        if(x<point.x) {
+        	return -1;
+        }
+        return y-point.y;
+    }
+    
+    public boolean equals(Object obj) {
+    	if(!(obj instanceof Point)) {
+    		return false;
+    	}
+    	Point point = (Point) obj;
+    	return (x == point.x) && (y == point.y);
+    }
+    
+    public int hashCode() {
+    	return x ^ y;
     }
     
     public String toString() {
