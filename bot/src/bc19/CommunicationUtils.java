@@ -31,7 +31,7 @@ public class CommunicationUtils {
 	Check that the arguments (i.e. lower 13 bits) of a signal matches the given mask.
 	 */
 	private static boolean argumentMatches(short argumentMask, int signal) {
-		return (short) (((short) signal << INSTRUCTION_SIZE_BITS) >>> INSTRUCTION_SIZE_BITS) == argumentMask;
+		return (short) (signal % (0b1 << ARGUMENT_SIZE_BITS)) == argumentMask;
 	}
 
 	public static void sendAttackMessage(MyRobot r) {
@@ -40,8 +40,7 @@ public class CommunicationUtils {
 
 	public static boolean receivedAttackMessage(MyRobot r) {
 		for (Robot other : r.getVisibleRobots()) {
-			if (r.isRadioing(other)
-					&& instructionMatches(PROPHET_ATTACK_MASK, (short) other.signal)) {
+			if (r.isRadioing(other) && instructionMatches(PROPHET_ATTACK_MASK, (short) other.signal)) {
 				return true;
 			}
 		}
@@ -55,9 +54,11 @@ public class CommunicationUtils {
 
 	public static boolean receivedBumpMessage(MyRobot r) {
 		for (Robot other : r.getVisibleRobots()) {
-			if (r.isRadioing(other) && instructionMatches(PROPHET_BUMP_MASK, (short) other.signal)
-					&& argumentMatches((short) r.id, other.signal)) {
-				return true;
+
+			if (r.isRadioing(other) && instructionMatches(PROPHET_BUMP_MASK, (short) other.signal)) {
+				if (argumentMatches((short) r.id, other.signal)) {
+					return true;
+				}
 			}
 		}
 		return false;

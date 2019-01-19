@@ -47,6 +47,7 @@ public class Prophet {
                 return beginAttack(r);
             }
             ring++;
+            r.log("Received bump request to level " + ring);
             ringTarget = null;
         }
 
@@ -117,6 +118,7 @@ public class Prophet {
         // 2. Do either turtling or attacking actions
         if (state == State.TURTLING) {
             if (CommunicationUtils.receivedAttackMessage(r)) {
+                r.log("Received attack message");
                 return beginAttack(r);
             }
             return ringFormation(r);
