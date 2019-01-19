@@ -108,7 +108,7 @@ public class Castle {
     	
         // 1. Build our initial pilgrims if we haven't built them yet.
         if (initialPilgrimsBuilt < Constants.CASTLE_MAX_INITIAL_PILGRIMS) {
-            CommunicationUtils.sendPilgrimInfo(r, targets.get(0), 3);
+            CommunicationUtils.sendPilgrimInfoMessage(r, targets.get(0), 3);
         	BuildAction action = Utils.tryAndBuildInRandomSpace(r, r.SPECS.PILGRIM);
             if (action != null) {
                 initialPilgrimsBuilt++;
