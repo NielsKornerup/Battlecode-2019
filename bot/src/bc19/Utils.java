@@ -2,7 +2,8 @@ package bc19;
 
 import java.util.ArrayList;
 import java.util.HashMap;
-
+import java.util.Comparator;
+import java.util.Collections;
 
 public class Utils {
 
@@ -59,11 +60,11 @@ public class Utils {
     }
 
     public static AttackAction tryAndAttack(MyRobot r, int attackRadiusSq) {
-        ArrayList<Point> enemiesNearby = Utils.getUnitsInRange(r, -1, false, 0, attackRadiusSq);
+        ArrayList<RobotSort> enemiesNearby = Utils.getRobotsInRange(r, false, 0, attackRadiusSq);
         if (enemiesNearby.size() > 0) {
-            // Attack an enemy at random
-            // TODO: smart targeting of enemies (prioritize Castles, etc and sort list)
-            for (Point attackPoint : enemiesNearby) {
+            // Attack the enemy with highest priority
+            for (RobotSort target : enemiesNearby) {
+            	Point attackPoint = new Point(target.x, target.y);
                 if (Utils.canAttack(r, attackPoint)) {
                     return r.attack(attackPoint.x, attackPoint.y);
                 }
@@ -199,6 +200,27 @@ public class Utils {
             }
         }
         return nearby;
+    }
+    
+    public static ArrayList<RobotSort> getRobotsInRange(MyRobot r, boolean myTeam, int minRadiusSq, int maxRadiusSq){
+    	ArrayList<RobotSort> nearby = new ArrayList<RobotSort>();
+    	for (Robot robot : r.getVisibleRobots()) {
+            if ((myTeam && (robot.team != r.me.team)) || (!myTeam && (robot.team == r.me.team))) {
+                continue;
+            }
+            if (robot.x == r.me.x && robot.y == r.me.y) {
+                continue;
+            }
+            int distX = robot.x - r.me.x;
+            int distY = robot.y - r.me.y;
+            int distanceSquared = distX * distX + distY * distY;
+            if (distanceSquared >= minRadiusSq && distanceSquared <= maxRadiusSq) {
+            	RobotSort rob = new RobotSort(robot.id, robot.unit, robot.x, robot.y, distanceSquared, robot.health);
+                nearby.add(rob);
+            }
+        }
+    	Collections.sort(nearby);
+    	return nearby;
     }
 
     /*
