@@ -170,6 +170,10 @@ public class Utils {
         return Math.abs(r.me.x - other.x) <= 1 && Math.abs(r.me.y - other.y) <= 1;
     }
 
+    public static boolean isBetween(Point a, Point b, Point test) {
+        return (b.x - a.x) * (test.x - a.x) + (b.y - a.y) * (test.y - a.y) >= 1;
+    }
+
     /*
     Returns Arraylist of [dx, dy] of Units that are directly adjacent (i.e. in the 8 squares around the unit).
      */
