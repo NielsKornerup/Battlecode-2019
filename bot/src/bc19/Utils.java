@@ -3,6 +3,9 @@ package bc19;
 import java.util.ArrayList;
 import java.util.List;
 
+import java.util.HashMap;
+import java.util.Comparator;
+import java.util.Collections;
 
 public class Utils {
 
@@ -50,16 +53,21 @@ public class Utils {
 
     }
 
+    public static boolean canSignal(MyRobot r, int radiusSq) {
+        return r.fuel >= Math.ceil(Math.sqrt(radiusSq));
+    }
+
     public static boolean canBuild(MyRobot r, int unitToBuild) {
         return r.karbonite >= Utils.getSpecs(r, unitToBuild).CONSTRUCTION_KARBONITE && r.fuel >= Utils.getSpecs(r, unitToBuild).CONSTRUCTION_FUEL;
     }
 
     public static AttackAction tryAndAttack(MyRobot r, int attackRadiusSq) {
-        ArrayList<Point> enemiesNearby = Utils.getUnitsInRange(r, -1, false, 0, attackRadiusSq);
+        ArrayList<RobotSort> enemiesNearby = Utils.getRobotSortInRange(r, false, 0, attackRadiusSq);
         if (enemiesNearby.size() > 0) {
-            // Attack an enemy at random
-            // TODO: smart targeting of enemies (prioritize Castles, etc and sort list)
-            for (Point attackPoint : enemiesNearby) {
+        	r.log("********************************************");
+            // Attack the enemy with highest priority
+            for (RobotSort target : enemiesNearby) {
+            	Point attackPoint = new Point(target.x - r.me.x, target.y - r.me.y);
                 if (Utils.canAttack(r, attackPoint)) {
                     return r.attack(attackPoint.x, attackPoint.y);
                 }
@@ -196,28 +204,7 @@ public class Utils {
         }
         return nearby;
     }
-    
-    /*
-    Returns Arraylist of Robots that are directly adjacent (i.e. in the 8 squares around the unit).
-     */
-    public static ArrayList<Robot> getAdjacentRobots(MyRobot r, int unitType, boolean myTeam) {
-        ArrayList<Robot> nearby = new ArrayList<>();
-        for (Robot robot : r.getVisibleRobots()) {
-            if (unitType != -1 && robot.unit != unitType) {
-                continue;
-            }
-            if ((myTeam && (robot.team != r.me.team)) || (!myTeam && (robot.team == r.me.team))) {
-                continue;
-            }
-            if (robot.x == r.me.x && robot.y == r.me.y) {
-                continue;
-            }
-            if (Math.abs(robot.x - r.me.x) <= 1 && Math.abs(robot.y - r.me.y) <= 1) {
-                nearby.add(robot);
-            }
-        }
-        return nearby;
-    }
+
 
     /*
     Returns ArrayList of [dx, dy] of Units that are in range.
@@ -322,6 +309,74 @@ public class Utils {
         }
         return nearby;
 		
+	}
+
+    public static HashMap<Integer, ArrayList<Point>> generateRingLocations(MyRobot r, Point castle, Point enemyCastle) {
+        HashMap<Integer, ArrayList<Point>> ringLocations = new HashMap<>();
+        boolean[][] passableMap = r.getPassableMap();
+
+        for (int y = 0; y < passableMap.length; y++) {
+            for (int x = 0; x < passableMap[y].length; x++) {
+                if (!passableMap[y][x] || !Utils.isBetween(castle, enemyCastle, new Point(x, y))) {
+                    continue;
+                }
+                double dx = x - castle.x;
+                double dy = y - castle.y;
+                int distance = (int) Math.sqrt(dx * dx + dy * dy);
+                if (!ringLocations.containsKey(distance)) {
+                    ringLocations.put(distance, new ArrayList<>());
+                }
+                ringLocations.get(distance).add(new Point(x, y));
+            }
+        }
+        return ringLocations;
+    }
+
+    // Must be called immediately after spawning to work
+    public static Point getCastleLocation(MyRobot r) {
+        // TODO make work with Churches too
+        Point initialCastleDelta = Utils.getAdjacentUnits(r, r.SPECS.CASTLE, true).get(0);
+        return new Point(r.me.x + initialCastleDelta.x, r.me.y + initialCastleDelta.y);
+    }
+    
+    public static ArrayList<RobotSort> getRobotSortInRange(MyRobot r, boolean myTeam, int minRadiusSq, int maxRadiusSq){
+    	ArrayList<RobotSort> nearby = new ArrayList<RobotSort>();
+    	for (Robot robot : r.getVisibleRobots()) {
+            if ((myTeam && (robot.team != r.me.team)) || (!myTeam && (robot.team == r.me.team))) {
+                continue;
+            }
+            if (robot.x == r.me.x && robot.y == r.me.y) {
+                continue;
+            }
+            int distX = robot.x - r.me.x;
+            int distY = robot.y - r.me.y;
+            int distanceSquared = distX * distX + distY * distY;
+            if (distanceSquared >= minRadiusSq && distanceSquared <= maxRadiusSq) {
+            	RobotSort rob = new RobotSort(robot.id, robot.unit, robot.x, robot.y, distanceSquared, robot.health);
+                nearby.add(rob);
+            }
+        }
+    	Collections.sort(nearby);
+    	return nearby;
+    }
+
+	public static ArrayList<Robot> getAdjacentRobots(MyRobot r, int unitType, boolean myTeam) {
+        ArrayList<Robot> nearby = new ArrayList<>();
+        for (Robot robot : r.getVisibleRobots()) {
+            if (unitType != -1 && robot.unit != unitType) {
+                continue;
+            }
+            if ((myTeam && (robot.team != r.me.team)) || (!myTeam && (robot.team == r.me.team))) {
+                continue;
+            }
+            if (robot.x == r.me.x && robot.y == r.me.y) {
+                continue;
+            }
+            if (Math.abs(robot.x - r.me.x) <= 1 && Math.abs(robot.y - r.me.y) <= 1) {
+                nearby.add(robot);
+            }
+        }
+        return nearby;
 	}
 
 }
