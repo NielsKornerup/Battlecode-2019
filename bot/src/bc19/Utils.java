@@ -62,9 +62,10 @@ public class Utils {
     public static AttackAction tryAndAttack(MyRobot r, int attackRadiusSq) {
         ArrayList<RobotSort> enemiesNearby = Utils.getRobotsInRange(r, false, 0, attackRadiusSq);
         if (enemiesNearby.size() > 0) {
+        	r.log("********************************************");
             // Attack the enemy with highest priority
             for (RobotSort target : enemiesNearby) {
-            	Point attackPoint = new Point(target.x, target.y);
+            	Point attackPoint = new Point(target.x - r.me.x, target.y - r.me.y);
                 if (Utils.canAttack(r, attackPoint)) {
                     return r.attack(attackPoint.x, attackPoint.y);
                 }
