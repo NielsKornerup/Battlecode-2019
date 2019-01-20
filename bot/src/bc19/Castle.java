@@ -15,6 +15,7 @@ public class Castle {
     private static ArrayList<Point> targets = new ArrayList<>();
 
     private static HashMap<Integer, Point> castleLocations = new HashMap<>(); // Maps from unit ID to location
+    private static ArrayList<Point> enemyCastleLocations = new ArrayList<>();
     
     private static void populateTargets(MyRobot r) {
     	ArrayList<Point> mySpot = new ArrayList<>();
@@ -77,7 +78,7 @@ public class Castle {
         return targets;
     }
 
-    public static void getOtherCastleLocations(MyRobot r) {
+    public static void getAllCastleLocations(MyRobot r) {
         if (r.turn == 1) {
             // Add our own location to the HashMap
             castleLocations.put(r.me.id, new Point(r.me.x, r.me.y));
@@ -95,9 +96,12 @@ public class Castle {
                 }
             }
 
+            // Rebroadcast our X coordinate (since it's expired as we intercepted it)
+            CastleTalkUtils.sendCastleCoord(r, r.me.x);
+        } else if (r.turn == 3) {
             // Send our Y coordinate
             CastleTalkUtils.sendCastleCoord(r, r.me.y);
-        } else if (r.turn == 3) {
+        } else if (r.turn == 4) {
             // Add Y coordinates received from other castles
             for (Robot robot : r.getVisibleRobots()) {
                 int castleCoordY = CastleTalkUtils.getCastleCoord(r, robot);
@@ -107,9 +111,13 @@ public class Castle {
                     castleLocations.put(robot.id, new Point(point.x, castleCoordY));
                 }
             }
-        } else if (r.turn == 4) {
-            for (Integer key : castleLocations.keySet()) {
-                r.log(key + " " + castleLocations.get(key).x + " " + castleLocations.get(key).y);
+
+            // Rebroadcast our Y coordinate (since it's expired as we intercepted it)
+            CastleTalkUtils.sendCastleCoord(r, r.me.y);
+
+            // Populate our enemy castle locations
+            for (Integer id : castleLocations.keySet()) {
+                enemyCastleLocations.add(Utils.getMirroredPosition(r, castleLocations.get(id)));
             }
         }
     }
@@ -119,7 +127,7 @@ public class Castle {
     		populateTargets(r);
     	}
 
-    	//getOtherCastleLocations(r);
+    	getAllCastleLocations(r);
     	
     	//TODO: code this constant for the max range
     	List<Robot> robots = Utils.getRobotsInRange(r, r.SPECS.PILGRIM, true, 0, 5);

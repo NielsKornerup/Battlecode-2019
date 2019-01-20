@@ -17,7 +17,7 @@ public class CastleTalkUtils {
 
     public static int getCastleCoord(MyRobot r, Robot other) {
         if (instructionMatches(CASTLE_LOCATION_COMMUNICATION_MASK, other.castle_talk)) {
-            return other.castle_talk % 64;
+            return other.castle_talk % (0b1 << ARGUMENT_SIZE_BITS);
         }
         return -1;
     }

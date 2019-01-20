@@ -252,6 +252,7 @@ public class Utils {
     Determines if the map is horizontally or vertically mirrored, and returns the mirrored position of the current robot.
      */
     public static Point getMirroredPosition(MyRobot rob, Point position) {
+        // TODO only compute this horizontal / vertical symmetry once
         boolean[][] passableMap = rob.getPassableMap();
         int ht = passableMap.length;
         int wid = passableMap[0].length;
