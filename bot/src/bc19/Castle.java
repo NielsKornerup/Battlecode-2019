@@ -263,7 +263,6 @@ public class Castle {
 
         // TODO implement logic/heuristics to prevent existing units from starving Castle of building opportunities
 
-
         // 2. Spam crusaders at end of game
         if (r.turn > Constants.CASTLE_SPAM_CRUSADERS_TURN) {
             BuildAction action = Utils.tryAndBuildInRandomSpace(r, r.SPECS.CRUSADER);
