@@ -25,6 +25,8 @@ public class Prophet {
     private static Point enemyCastleLocation;
     private static HashMap<Point, Integer> otherEnemyCastleLocations = new HashMap<>(); // Maps from Point to bullshit
 
+    private static final int TURNS_BEFORE_DONE_RECEIVING_ENEMY_CASTLE_LOCATIONS = 2;
+
     private static Point pickRingTarget(MyRobot r) {
         ArrayList<Point> pointsInRing = ringLocations.get(ring);
         if (ring > RING_START) {
@@ -119,26 +121,20 @@ public class Prophet {
         if (r.turn == 1) {
             doFirstTurnActions(r);
         }
-
-        getEnemyCastleLocations(r);
-
-        if (r.turn < 3) { // TODO should this be 3 instead?
-            // Wait for castle to finish broadcasting
-            return null;
+        if (r.turn < TURNS_BEFORE_DONE_RECEIVING_ENEMY_CASTLE_LOCATIONS) {
+            getEnemyCastleLocations(r);
         }
 
-        if (r.turn == 3) {
-            r.log("[combat] Counterpart enemy castle location: " + enemyCastleLocation.x + " " + enemyCastleLocation.y);
-            r.log("[combat] Other enemy castle locations:");
-            for (Point point : otherEnemyCastleLocations.keySet()) {
-                r.log(point.x + " " + point.y);
-            }
-        }
 
         // 1. Attack enemies if nearby
         AttackAction attackAction = Utils.tryAndAttack(r, Utils.mySpecs(r).ATTACK_RADIUS[1]);
         if (attackAction != null) {
             return attackAction;
+        }
+
+        if (r.turn < TURNS_BEFORE_DONE_RECEIVING_ENEMY_CASTLE_LOCATIONS) {
+            // Wait for castle to finish broadcasting enemy castle locations before moving
+            return null;
         }
 
         // 2. Do either turtling or attacking actions
