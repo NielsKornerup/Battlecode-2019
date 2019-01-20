@@ -6,7 +6,7 @@ import java.lang.Math;
 public class Castle {
     private static final int CASTLE_ATTACK_RADIUS_SQ = 64;
     private static int initialPilgrimsBuilt = 0;
-	
+
     public static int CASTLE_MAX_INITIAL_PILGRIMS = 5;
 
     private static int numAggressiveScoutUnitsBuilt = 0;
@@ -23,50 +23,50 @@ public class Castle {
      */
 
     private static void computeNumPilgrimsToBuild(MyRobot r) {
-    	boolean[][] karbMap = r.karboniteMap;
-    	boolean[][] fuelMap = r.fuelMap;
-    	int count = 0;
-    	for(int y = 0; y < karbMap.length; y++) {
-    		for(int x = 0; x < karbMap[y].length; x++) {
-    			if(karbMap[y][x] || fuelMap[y][x]) {
-    				count++;
-    			}
-    		}
-    	}
-    	CASTLE_MAX_INITIAL_PILGRIMS = count/(2*(1+otherEnemyCastleLocations.size()));
+        boolean[][] karbMap = r.karboniteMap;
+        boolean[][] fuelMap = r.fuelMap;
+        int count = 0;
+        for(int y = 0; y < karbMap.length; y++) {
+            for(int x = 0; x < karbMap[y].length; x++) {
+                if(karbMap[y][x] || fuelMap[y][x]) {
+                    count++;
+                }
+            }
+        }
+        CASTLE_MAX_INITIAL_PILGRIMS = count/(2*(1+otherEnemyCastleLocations.size()));
     }
 
     private static void populateTargets(MyRobot r) {
-    	ArrayList<Point> mySpot = new ArrayList<>();
-    	mySpot.add(Utils.getLocation(r.me));
-    	Navigation myMap = new Navigation(r, r.getPassableMap(), mySpot);
-    	List<Point> karbPoints = computeKarbPoints(r);
-    	List<Point> fuelPoints = computeFuelPoints(r);
-    	
-    	//TODO: make this fast with sorting
-    	while(karbPoints.size() > 0 || fuelPoints.size() > 0) {
-    		if(karbPoints.size()> 0 && (fuelPoints.size()==0 || targets.size()%2 ==0)) {
-    			int bestIndex = 0;
-    			for(int index = 1; index < karbPoints.size(); index++) {
-    				if(myMap.getPotential(karbPoints.get(index)) < myMap.getPotential(karbPoints.get(bestIndex))) {
-    					bestIndex = index;
-    				}
-    			}
-    			targets.add(karbPoints.get(bestIndex));
-    			karbPoints.remove(bestIndex);
-    		} else {
-    			int bestIndex = 0;
-    			for(int index = 1; index < fuelPoints.size(); index++) {
-    				if(myMap.getPotential(fuelPoints.get(index)) < myMap.getPotential(fuelPoints.get(bestIndex))) {
-    					bestIndex = index;
-    				}
-    			}
-    			targets.add(fuelPoints.get(bestIndex));
-    			fuelPoints.remove(bestIndex);
-    		}
-    	}
+        ArrayList<Point> mySpot = new ArrayList<>();
+        mySpot.add(Utils.getLocation(r.me));
+        Navigation myMap = new Navigation(r, r.getPassableMap(), mySpot);
+        List<Point> karbPoints = computeKarbPoints(r);
+        List<Point> fuelPoints = computeFuelPoints(r);
+
+        //TODO: make this fast with sorting
+        while(karbPoints.size() > 0 || fuelPoints.size() > 0) {
+            if(karbPoints.size()> 0 && (fuelPoints.size()==0 || targets.size()%2 ==0)) {
+                int bestIndex = 0;
+                for(int index = 1; index < karbPoints.size(); index++) {
+                    if(myMap.getPotential(karbPoints.get(index)) < myMap.getPotential(karbPoints.get(bestIndex))) {
+                        bestIndex = index;
+                    }
+                }
+                targets.add(karbPoints.get(bestIndex));
+                karbPoints.remove(bestIndex);
+            } else {
+                int bestIndex = 0;
+                for(int index = 1; index < fuelPoints.size(); index++) {
+                    if(myMap.getPotential(fuelPoints.get(index)) < myMap.getPotential(fuelPoints.get(bestIndex))) {
+                        bestIndex = index;
+                    }
+                }
+                targets.add(fuelPoints.get(bestIndex));
+                fuelPoints.remove(bestIndex);
+            }
+        }
     }
-    
+
     private static List<Point> computeKarbPoints(MyRobot r) {
         boolean[][] karboniteMap = r.getKarboniteMap();
 
@@ -210,15 +210,15 @@ public class Castle {
     }
 
     public static Action act(MyRobot r) {
-    	if(r.turn == 1) {
-    		populateTargets(r);
-    	}
+        if(r.turn == 1) {
+            populateTargets(r);
+        }
 
-    	handleCastleTalk(r);
+        handleCastleTalk(r);
 
         // Finish up broadcasting if necessary
-    	boolean alreadyBroadcastedEnemyCastleLocation = false;
-    	if (enemyCastleLocationIndex < otherEnemyCastleLocations.size()) {
+        boolean alreadyBroadcastedEnemyCastleLocation = false;
+        if (enemyCastleLocationIndex < otherEnemyCastleLocations.size()) {
             broadcastEnemyCastleLocation(r);
             alreadyBroadcastedEnemyCastleLocation = true;
         }
@@ -273,12 +273,34 @@ public class Castle {
 
         // TODO implement logic/heuristics to prevent existing units from starving Castle of building opportunities
 
+        // 3. Spam crusaders at end of game
+        if (r.turn > Constants.CASTLE_SPAM_CRUSADERS_TURN) {
+            BuildAction action = Utils.tryAndBuildInRandomSpace(r, r.SPECS.CRUSADER);
+            if (action != null) {
+                return action;
+            }
+        }
 
-        
+        // 4. If we haven't built any aggressive scout units yet, build them.
+        if (numAggressiveScoutUnitsBuilt < Constants.NUM_AGGRESSIVE_SCOUT_UNITS_TO_BUILD) {
+            BuildAction action = Utils.tryAndBuildInRandomSpace(r, r.SPECS.PROPHET);
+            if (action != null) {
+                CommunicationUtils.sendAggressiveScoutLocation(r, getContestedKarboniteGuardPoint(r));
+                numAggressiveScoutUnitsBuilt++;
+                return action;
+            }
+        }
 
-        // 3. Build a prophet.
-        if(r.turn > 50) {
-            BuildAction action = Utils.tryAndBuildInOptimalSpace(r, r.SPECS.PROPHET);
+        // 5. Build a prophet.
+        if (r.turn <= 50) {
+            // Only build a prophet if we've detected enemies nearby and there are no prophets
+            int numEnemyPilgrims = Utils.getRobotsInRange(r, -1, false, 0, 1000).size();
+            int numFriendlyProphets = Utils.getRobotsInRange(r, r.SPECS.PROPHET, true, 0, 1000).size();
+            if (numEnemyPilgrims > 0 && numFriendlyProphets < 1) {
+                return Utils.tryAndBuildInRandomSpace(r, r.SPECS.PROPHET); // TODO spawn on side of castle closer to enemy
+            }
+        } else if(r.turn > 50) {
+            BuildAction action = Utils.tryAndBuildInRandomSpace(r, r.SPECS.PROPHET);
             if (action != null) {
                 enemyCastleLocationIndex = 0;
                 if (!alreadyBroadcastedEnemyCastleLocation) {
@@ -288,7 +310,7 @@ public class Castle {
             }
         }
 
-        // 4. Finally, if we cannot build anything, attack if there are enemies in range.
+        // 6. Finally, if we cannot build anything, attack if there are enemies in range.
         AttackAction attackAction = Utils.tryAndAttack(r, CASTLE_ATTACK_RADIUS_SQ);
         if (attackAction != null) {
             return attackAction;

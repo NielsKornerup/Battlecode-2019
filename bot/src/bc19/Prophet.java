@@ -28,6 +28,9 @@ public class Prophet {
     private static final int TURNS_BEFORE_DONE_RECEIVING_ENEMY_CASTLE_LOCATIONS = 2;
 
     private static Point pickRingTarget(MyRobot r) {
+        if (!ringLocations.containsKey(ring)) {
+            return null;
+        }
         ArrayList<Point> pointsInRing = ringLocations.get(ring);
         if (ring > RING_START) {
             return Utils.findClosestPoint(r, pointsInRing);
@@ -45,7 +48,7 @@ public class Prophet {
         return null;
     }
 
-    private static Action ringFormation(MyRobot r) {
+    public static Action ringFormation(MyRobot r) {
         if (CommunicationUtils.receivedBumpMessage(r) && Utils.isOn(r, ringTarget)) {
             if (ring >= MAX_RING_LEVEL) {
                 return beginAttack(r);
@@ -116,6 +119,10 @@ public class Prophet {
     }
 
     private static void invalidateEnemyCastleTargetsIfNecessary(MyRobot r) {
+        if (enemyCastleMap == null) {
+            return;
+        }
+
         List<Point> targets = enemyCastleMap.getTargets();
 
         Point myLoc = new Point(r.me.x, r.me.y);

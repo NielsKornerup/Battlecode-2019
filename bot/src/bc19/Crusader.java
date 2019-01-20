@@ -6,6 +6,10 @@ package bc19;
 public class Crusader {
 
 	public static Action act(MyRobot r) {
-		return null;
+		Action action = Utils.tryAndAttack(r, Constants.CRUSADER_ATTACK_RADIUS);
+		if(action == null) {
+			action = Prophet.ringFormation(r);
+		}
+		return action;
 	}
 }
