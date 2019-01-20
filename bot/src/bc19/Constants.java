@@ -5,6 +5,9 @@ package bc19;
  */
 public class Constants {
 
+	/* Castle-specific */
+	public static final int CASTLE_ATTACK_RADIUS_SQ = 64;
+
 	/* Pilgrim-specific */
 	public static final int PILGRIM_MINE_FUEL_COST = 1;
 
@@ -23,8 +26,8 @@ public class Constants {
 	public static final int PROPHET_FUEL_PER_MOVE = 2;
 	public static final int PREACHER_FUEL_PER_MOVE = 3;
 
-	public static final int CASTLE_SPAM_CRUSADERS_TURN = 800;
-	public static final int CASTLE_SPAM_PROPHETS_TURN = 50;
+	public static final int CASTLE_SPAM_CRUSADERS_TURN_THRESHOLD = 800;
+	public static final int CASTLE_CREATE_COMBAT_PROPHETS_TURN_THRESHOLD = 50;
 
 	public static final int CRUSADER_ATTACK_RADIUS = 4;
 

@@ -449,4 +449,64 @@ public class Utils {
         return nearby;
 	}
 
+	public static List<Point> getFuelPoints(MyRobot r) {
+        boolean[][] fuelMap = r.getFuelMap();
+
+        List<Point> targets = new ArrayList<>();
+        for (int y = 0; y < fuelMap.length; y++) {
+            for (int x = 0; x < fuelMap[y].length; x++) {
+                if (fuelMap[y][x]) {
+                    targets.add(new Point(x, y));
+                }
+            }
+        }
+        return targets;
+    }
+
+    public static List<Point> getKarbonitePoints(MyRobot r) {
+        boolean[][] karboniteMap = r.getKarboniteMap();
+
+        List<Point> targets = new ArrayList<>();
+        for (int y = 0; y < karboniteMap.length; y++) {
+            for (int x = 0; x < karboniteMap[y].length; x++) {
+                if (karboniteMap[y][x]) {
+                    targets.add(new Point(x, y));
+                }
+            }
+        }
+
+        return targets;
+    }
+
+    public static Point getContestedKarboniteGuardPoint(MyRobot r){
+        List<Point> karb = getKarbonitePoints(r);
+        Point myLoc = new Point(r.me.x, r.me.y);
+        Point enemyLoc = Utils.getMirroredPosition(r, myLoc);
+        int smallestDiff = 100000;
+        Point bestPoint = null;
+        for (Point loc : karb){
+            int dist1 = Utils.computeManhattanDistance(myLoc, loc);
+            int dist2 = Utils.computeManhattanDistance(enemyLoc,loc);
+            int diff = Math.abs(dist1-dist2)*100+dist1;
+            if (diff<smallestDiff){
+                smallestDiff = diff;
+                bestPoint = loc;
+            }
+        }
+        boolean[][] passableMap = r.getPassableMap();
+        Point finalPoint = new Point(bestPoint.x, bestPoint.y);
+        for (int dx = -1; dx <=1; dx++){
+            for (int dy = -1; dy <=1; dy++){
+                if (!(dx==0&&dy==0)){
+                    if (passableMap[bestPoint.x+dx][bestPoint.y+dy]){
+                        finalPoint.x = bestPoint.x+dx;
+                        finalPoint.y = bestPoint.y+dy;
+                    }
+                }
+            }
+        }
+        r.log("Contested karb location is " + finalPoint.x + " " + finalPoint.y);
+        return finalPoint;
+    }
+
 }
