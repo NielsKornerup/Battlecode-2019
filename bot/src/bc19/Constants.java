@@ -29,4 +29,6 @@ public class Constants {
 	public static final int CRUSADER_ATTACK_RADIUS = 4;
 
 	public static final int NUM_AGGRESSIVE_SCOUT_UNITS_TO_BUILD = 1;
+
+	public static final int MAX_NUM_CASTLES = 3;
 }

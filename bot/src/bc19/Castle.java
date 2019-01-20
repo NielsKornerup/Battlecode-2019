@@ -7,12 +7,12 @@ public class Castle {
     private static final int CASTLE_ATTACK_RADIUS_SQ = 64;
     private static int initialPilgrimsBuilt = 0;
 
-    public static int CASTLE_MAX_INITIAL_PILGRIMS = 5;
+    public static int CASTLE_MAX_INITIAL_PILGRIMS = 2;
 
     private static int numAggressiveScoutUnitsBuilt = 0;
 
     private static HashMap<Integer, Point> otherCastleLocations = new HashMap<>(); // Maps from unit ID to location
-    private static ArrayList<Point> otherEnemyCastleLocations = new ArrayList<>(); // Doesn't include the enemy castle that mirrors ours
+    private static ArrayList<Point> enemyCastleLocations = new ArrayList<>(); // Doesn't include the enemy castle that mirrors ours
     
     /*
      * must get enemy castle locations before calling this
@@ -28,7 +28,7 @@ public class Castle {
                 }
             }
         }
-        CASTLE_MAX_INITIAL_PILGRIMS = count/(2*(1+otherEnemyCastleLocations.size()));
+        CASTLE_MAX_INITIAL_PILGRIMS = count/(2*(enemyCastleLocations.size()));
     }
 
     private static List<Point> computeKarbPoints(MyRobot r) {
@@ -77,14 +77,13 @@ public class Castle {
     	return finalPoint;
     }
 
-    public static void getAllCastleLocations(MyRobot r) {
+    public static void handleCastleLocationMessages(MyRobot r) {
         if (r.turn == 1) {
             // Send our X coordinate
             CastleTalkUtils.sendCastleCoord(r, r.me.x);
         } else if (r.turn == 2) {
             // Add X coordinates received from other castles
             for (Robot robot : r.getVisibleRobots()) {
-                // TODO this assumes that only castles are broadcasting with castle talk on the first 3 turns. Something to keep in mind
                 int castleCoordX = CastleTalkUtils.getCastleCoord(r, robot);
                 if (castleCoordX != -1) {
                     // Put the X in our HashMap
@@ -111,51 +110,50 @@ public class Castle {
             // Rebroadcast our Y coordinate (since it's expired as we intercepted it)
             CastleTalkUtils.sendCastleCoord(r, r.me.y);
 
+            // Remove our entry (in case we read our own broadcast)
             otherCastleLocations.remove(r.me.id);
+
             // Populate our enemy castle locations
+            enemyCastleLocations.add(Utils.getMirroredPosition(r, new Point(r.me.x, r.me.y))); // Add counterpart
             for (Integer id : otherCastleLocations.keySet()) {
-                otherEnemyCastleLocations.add(Utils.getMirroredPosition(r, otherCastleLocations.get(id)));
+                enemyCastleLocations.add(Utils.getMirroredPosition(r, otherCastleLocations.get(id)));
             }
         } else if (r.turn == 5) {
-            // Print enemy castle locations
-            // Point enemy = Utils.getMirroredPosition(r, new Point(r.me.x, r.me.y));
-            // r.log("[castle] Counterpart enemy castle location: " + enemy.x + " " + enemy.y);
-            // r.log("[castle] Other enemy castle locations: ");
-            for (Point point : otherEnemyCastleLocations) {
-                r.log(point.x + " " + point.y);
-            }
             Castle.computeNumPilgrimsToBuild(r);
         }
     }
 
-    private static int enemyCastleLocationIndex = 3; // Used for broadcasting, starts greater than number of castles
-    private static void broadcastEnemyCastleLocation(MyRobot r) {
-        if (enemyCastleLocationIndex < otherEnemyCastleLocations.size()) {
-            CommunicationUtils.sendEnemyCastleLocation(r, otherEnemyCastleLocations.get(enemyCastleLocationIndex));
-            enemyCastleLocationIndex++;
-        }
-    }
-
-    private static void handleCastleTalk(MyRobot r) {
-        getAllCastleLocations(r);
-
+    private static void handleEnemyCastleKilledMessages(MyRobot r) {
         // Check for enemy castle killed messages
         for (Robot robot : r.getVisibleRobots()) {
             if (CastleTalkUtils.enemyCastleKilled(r, robot)) {
                 r.log("Received enemy castle killed message");
                 // Figure out which one was killed
                 // TODO this removes the other two castles, but not the one we spawned at... this is problematic
-                int idToRemove = -1;
-                for (Integer id : otherCastleLocations.keySet()) {
-                    Point location = otherCastleLocations.get(id);
-                    if (CastleTalkUtils.enemyCastleKilledLocationMatches(r, robot, location)) {
-                        idToRemove = id;
+                Point pointToRemove = null;
+                for (Point point : enemyCastleLocations) {
+                    if (CastleTalkUtils.enemyCastleKilledLocationMatches(r, robot, point)) {
+                        pointToRemove = point;
                     }
                 }
-                r.log("Removing castle with id " + idToRemove);
-                otherCastleLocations.remove(idToRemove);
+                if (pointToRemove != null) {
+                    enemyCastleLocations.remove(pointToRemove);
+                }
             }
         }
+    }
+
+    private static int enemyCastleLocationIndex = Constants.MAX_NUM_CASTLES; // Used for broadcasting, starts greater than number of castles
+    private static void broadcastEnemyCastleLocation(MyRobot r) {
+        if (enemyCastleLocationIndex < enemyCastleLocations.size()) {
+            CommunicationUtils.sendEnemyCastleLocation(r, enemyCastleLocations.get(enemyCastleLocationIndex));
+            enemyCastleLocationIndex++;
+        }
+    }
+
+    private static void handleCastleTalk(MyRobot r) {
+        handleCastleLocationMessages(r);
+        handleEnemyCastleKilledMessages(r);
     }
 
     public static Action act(MyRobot r) {
@@ -164,7 +162,7 @@ public class Castle {
 
         // Finish up broadcasting if necessary
         boolean alreadyBroadcastedEnemyCastleLocation = false;
-        if (enemyCastleLocationIndex < otherEnemyCastleLocations.size()) {
+        if (enemyCastleLocationIndex < enemyCastleLocations.size()) {
             broadcastEnemyCastleLocation(r);
             alreadyBroadcastedEnemyCastleLocation = true;
         }
@@ -221,7 +219,7 @@ public class Castle {
         } else if(r.turn > 50) {
             BuildAction action = Utils.tryAndBuildInRandomSpace(r, r.SPECS.PROPHET);
             if (action != null) {
-                enemyCastleLocationIndex = 0;
+                enemyCastleLocationIndex = 1;
                 if (!alreadyBroadcastedEnemyCastleLocation) {
                     broadcastEnemyCastleLocation(r);
                 }
