@@ -4,6 +4,7 @@ import java.util.ArrayList;
 import java.util.Collections;
 import java.util.HashMap;
 import java.util.List;
+import java.lang.Math;
 
 public class Utils {
 
@@ -322,6 +323,10 @@ public class Utils {
     
     public static int computeSquareDistance(Point p1, Point p2) {
     	return (p1.x-p2.x)*(p1.x-p2.x) + (p1.y-p2.y)*(p1.y-p2.y); 
+    }
+    
+    public static int computeManhattanDistance(Point p1, Point p2) {
+    	return Math.abs(p1.x-p2.x) + Math.abs(p1.y-p2.y); 
     }
     
     public static Point getLocation(Robot r) {

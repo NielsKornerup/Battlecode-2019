@@ -1,6 +1,7 @@
 package bc19;
 
 import java.util.*;
+import java.lang.Math;
 
 public class Castle {
     private static final int CASTLE_ATTACK_RADIUS_SQ = 64;
@@ -79,6 +80,36 @@ public class Castle {
         }
 
         return targets;
+    }
+    
+    private static Point getContestedKarboniteGuardPoint(MyRobot r){
+    	List<Point> karb = computeKarbPoints(r);
+    	Point myLoc = new Point(r.x, r.y);
+    	Point enemyLoc = Utils.getMirroredPosition(r, myLoc);
+    	int smallestDiff = 100000;
+    	Point bestPoint = null;
+    	for (Point loc : karb){
+    		int dist1 = Utils.computeManhattanDistance(myLoc, loc);
+    		int dist2 = Utils.computeManhattanDistance(enemyLoc,loc);
+    		int diff = Math.abs(dist1-dist2)*100+dist1;
+    		if (diff<smallestDiff){
+    			smallestDiff = diff;
+    			bestPoint = loc;
+    		}
+    	}
+    	boolean[][] passableMap = r.getPassableMap();
+    	Point finalPoint = new Point(bestPoint.x, bestPoint.y);
+    	for (int dx = -1; dx <=1; dx++){
+    		for (int dy = -1; dy <=1; dy++){
+    			if (!(dx==0&&dy==0)){
+    				if (passableMap[bestPoint.x+dx][bestPoint.y+dy]){
+    					finalPoint.x = bestPoint.x+dx;
+    					finalPoint.y = bestPoint.y+dy;
+    				}
+    			}
+    		}
+    	}
+    	return finalPoint;
     }
 
     private static List<Point> computeFuelPoints(MyRobot r) {
