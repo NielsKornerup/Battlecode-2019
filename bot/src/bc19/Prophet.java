@@ -142,6 +142,7 @@ public class Prophet {
         for (Robot robot : r.getVisibleRobots()) {
             if (CommunicationUtils.receivedAggressiveScoutLocation(r, robot)) {
                 aggressiveScout = true;
+                r.log("I am an aggressive scout.");
                 // Set Dijkstra map to just go to that area
                 ArrayList<Point> targets = new ArrayList<>();
                 targets.add(CommunicationUtils.getAggressiveScoutLocation(r, robot));

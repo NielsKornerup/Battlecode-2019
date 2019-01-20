@@ -84,7 +84,7 @@ public class Castle {
     
     private static Point getContestedKarboniteGuardPoint(MyRobot r){
     	List<Point> karb = computeKarbPoints(r);
-    	Point myLoc = new Point(r.x, r.y);
+    	Point myLoc = new Point(r.me.x, r.me.y);
     	Point enemyLoc = Utils.getMirroredPosition(r, myLoc);
     	int smallestDiff = 100000;
     	Point bestPoint = null;
@@ -109,6 +109,7 @@ public class Castle {
     			}
     		}
     	}
+    	r.log("Contested karb location is " + finalPoint.x + " " + finalPoint.y);
     	return finalPoint;
     }
 
@@ -267,7 +268,7 @@ public class Castle {
         if (numAggressiveScoutUnitsBuilt < Constants.NUM_AGGRESSIVE_SCOUT_UNITS_TO_BUILD) {
             BuildAction action = Utils.tryAndBuildInRandomSpace(r, r.SPECS.PROPHET);
             if (action != null) {
-                CommunicationUtils.sendAggressiveScoutLocation(r, Utils.getContestedKarboniteGuardPoint(r));
+                CommunicationUtils.sendAggressiveScoutLocation(r, getContestedKarboniteGuardPoint(r));
                 numAggressiveScoutUnitsBuilt++;
                 return action;
             }
