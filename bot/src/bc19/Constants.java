@@ -22,4 +22,5 @@ public class Constants {
 	public static final int PILGRIM_FUEL_PER_MOVE = 1;
 	public static final int PROPHET_FUEL_PER_MOVE = 2;
 	public static final int PREACHER_FUEL_PER_MOVE = 3;
+	public static final int NUM_AGGRESSIVE_SCOUT_UNITS_TO_BUILD = 1;
 }

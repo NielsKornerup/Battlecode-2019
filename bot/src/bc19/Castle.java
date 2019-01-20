@@ -7,6 +7,8 @@ public class Castle {
     private static int initialPilgrimsBuilt = 0;
 	
     public static int CASTLE_MAX_INITIAL_PILGRIMS = 5;
+
+    private static int numAggressiveScoutUnitsBuilt = 0;
 	
     private static int numFuelWorkers=0;
     private static int numKarbWorkers=0;
@@ -228,6 +230,17 @@ public class Castle {
         }
 
         // TODO implement logic/heuristics to prevent existing units from starving Castle of building opportunities
+
+
+        // 2. If we haven't built any aggressive scout units yet, build them.
+        if (numAggressiveScoutUnitsBuilt < Constants.NUM_AGGRESSIVE_SCOUT_UNITS_TO_BUILD) {
+            BuildAction action = Utils.tryAndBuildInRandomSpace(r, r.SPECS.PROPHET);
+            if (action != null) {
+                CommunicationUtils.sendAggressiveScoutLocation(r, Utils.getContestedKarboniteGuardPoint(r));
+                numAggressiveScoutUnitsBuilt++;
+                return action;
+            }
+        }
 
         // 3. Build a prophet.
         if(r.turn > 50) {

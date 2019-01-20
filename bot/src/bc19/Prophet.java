@@ -137,10 +137,43 @@ public class Prophet {
         }
     }
 
+    private static void doAggressiveScoutInitialization(MyRobot r) {
+        // Check if we are an aggressive scout
+        for (Robot robot : r.getVisibleRobots()) {
+            if (CommunicationUtils.receivedAggressiveScoutLocation(r, robot)) {
+                aggressiveScout = true;
+                // Set Dijkstra map to just go to that area
+                ArrayList<Point> targets = new ArrayList<>();
+                targets.add(CommunicationUtils.getAggressiveScoutLocation(r, robot));
+                // TODO we overload what the map does here which is kinda bad
+                enemyCastleMap = new Navigation(r, r.getPassableMap(), targets);
+                break;
+            }
+        }
+    }
+
+    private static Action doAggressiveScoutActions(MyRobot r) {
+        // 1. Attack enemies if nearby
+        AttackAction attackAction = Utils.tryAndAttack(r, Utils.mySpecs(r).ATTACK_RADIUS[1]);
+        if (attackAction != null) {
+            return attackAction;
+        }
+
+        // 2. Move towards aggression point
+        return Utils.moveDijkstraThenRandom(r, enemyCastleMap, 1);
+    }
+
+    static boolean aggressiveScout = false;
     public static Action act(MyRobot r) {
         if (r.turn == 1) {
             doFirstTurnActions(r);
+            doAggressiveScoutInitialization(r);
         }
+
+        if (aggressiveScout) {
+            return doAggressiveScoutActions(r);
+        }
+
         if (r.turn < TURNS_BEFORE_DONE_RECEIVING_ENEMY_CASTLE_LOCATIONS) {
             getEnemyCastleLocations(r);
         } else if (r.turn == TURNS_BEFORE_DONE_RECEIVING_ENEMY_CASTLE_LOCATIONS) {
