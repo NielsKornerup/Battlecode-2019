@@ -248,10 +248,20 @@ public class Castle {
     		}
     	}
     	
-        // 1. Build our initial pilgrims if we haven't built them yet.
+    	// 1. If we haven't built any aggressive scout units yet, build them.
+        if (numAggressiveScoutUnitsBuilt < Constants.NUM_AGGRESSIVE_SCOUT_UNITS_TO_BUILD) {
+            BuildAction action = Utils.tryAndBuildInOptimalSpace(r, r.SPECS.PROPHET);
+            if (action != null) {
+                CommunicationUtils.sendAggressiveScoutLocation(r, getContestedKarboniteGuardPoint(r));
+                numAggressiveScoutUnitsBuilt++;
+                return action;
+            }
+        }
+    	
+        // 2. Build our initial pilgrims if we haven't built them yet.
         if (initialPilgrimsBuilt < CASTLE_MAX_INITIAL_PILGRIMS) {
             CommunicationUtils.sendPilgrimInfoMessage(r, targets.get(0), 3);
-        	BuildAction action = Utils.tryAndBuildInRandomSpace(r, r.SPECS.PILGRIM);
+        	BuildAction action = Utils.tryAndBuildInOptimalSpace(r, r.SPECS.PILGRIM);
             if (action != null) {
                 initialPilgrimsBuilt++;
                 //TODO: is the 3 right?
@@ -264,19 +274,11 @@ public class Castle {
         // TODO implement logic/heuristics to prevent existing units from starving Castle of building opportunities
 
 
-        // 2. If we haven't built any aggressive scout units yet, build them.
-        if (numAggressiveScoutUnitsBuilt < Constants.NUM_AGGRESSIVE_SCOUT_UNITS_TO_BUILD) {
-            BuildAction action = Utils.tryAndBuildInRandomSpace(r, r.SPECS.PROPHET);
-            if (action != null) {
-                CommunicationUtils.sendAggressiveScoutLocation(r, getContestedKarboniteGuardPoint(r));
-                numAggressiveScoutUnitsBuilt++;
-                return action;
-            }
-        }
+        
 
         // 3. Build a prophet.
         if(r.turn > 50) {
-            BuildAction action = Utils.tryAndBuildInRandomSpace(r, r.SPECS.PROPHET);
+            BuildAction action = Utils.tryAndBuildInOptimalSpace(r, r.SPECS.PROPHET);
             if (action != null) {
                 enemyCastleLocationIndex = 0;
                 if (!alreadyBroadcastedEnemyCastleLocation) {
