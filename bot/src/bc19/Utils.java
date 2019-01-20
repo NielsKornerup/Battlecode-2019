@@ -107,7 +107,6 @@ public class Utils {
         if (canBuild(r, unitToBuild)) {
             return r.buildUnit(unitToBuild, bestPoint.x, bestPoint.y);
         }
-        r.log("best spot: " + bestPoint.x + " " + bestPoint.y);
         return null;
     }
 
