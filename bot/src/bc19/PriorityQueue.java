@@ -3,90 +3,123 @@ package bc19;
 import java.util.ArrayList;
 import java.util.List;
 
-public class PriorityQueue<T> {
-    private List<T> heap;
-    private Comparator<T> comparator;
+class Node implements Comparable<Node> {
+    int dist;
+    Point p;
 
-    public PriorityQueue(Comparator<T> c) {
-        heap = new ArrayList<>();
-        comparator = c;
+    public Node(int dist, Point p) {
+        this.dist = dist;
+        this.p = p;
+    }
+
+    public int compareTo(Node o) {
+        return dist - o.dist;
+    }
+}
+
+public class PriorityQueue {
+    private List<Node> heap;
+
+    public PriorityQueue() {
+        this.heap = new ArrayList<>();
     }
 
     public int size() {
-        return heap.size();
+        return this.heap.size();
     }
 
     public boolean isEmpty() {
-        return size() == 0;
+        return this.size() == 0;
     }
 
-    public void enqueue(T value) {
+    public void enqueue(Node value) {
         int sz = size();
-        heap.add(value);
-        up(size() - 1);
+        this.heap.add(value);
+        this.up(this.size() - 1);
     }
 
-    public T dequeue() {
+    public Node dequeue() {
         int sz = size();
         if (sz == 0) {
             throw new ArrayIndexOutOfBoundsException();
         }
-        T last = heap.get(heap.size() - 1);
-        heap.remove(heap.size() - 1);
-        if (heap.size() > 0) {
-           T ret = heap.get(0);
-           heap.set(0, last);
-           down(0);
-           return ret;
+        Node last = this.heap.get(this.heap.size() - 1);
+        this.heap.remove(this.heap.size() - 1);
+        if (this.heap.size() > 0) {
+            Node ret = this.heap.get(0);
+            this.heap.set(0, last);
+            this.down(0);
+            return ret;
         }
         return last;
     }
 
-    private boolean lt(T t1, T t2) {
-        return comparator.compare(t1, t2) < 0;
+    public boolean delete(Node n) {
+        if (this.heap.size() == 0) {
+            return false;
+        }
+        for (int i = 0; i < this.heap.size(); i++) {
+            if (n.p.x == this.heap.get(i).p.x && n.p.y == this.heap.get(i).p.y) {
+                if (this.heap.size() - 1 == i) {
+                    this.heap.remove(i);
+                } else {
+                    this.heap.set(i, this.heap.get(this.heap.size() - 1));
+                    down(i);
+                    up(i);
+                }
+                return true;
+            }
+        }
+        return false;
     }
 
-    private boolean gt(T t1, T t2) {
-        return comparator.compare(t1, t2) > 0;
+    private boolean lt(Node t1, Node t2) {
+        return t1.compareTo(t2) < 0;
+    }
+
+    private boolean gt(Node t1, Node t2) {
+        return t1.compareTo(t2) > 0;
     }
 
     private void up(int index) {
         if (index == 0) {
             return;
         }
-        T elt = heap.get(index);
+        Node elt = this.heap.get(index);
         int parIndex = (index - 1) / 2;
-        T par = heap.get(parIndex);
-        if (lt(elt, par)) {
-            heap.set(index, par);
-            heap.set(parIndex, elt);
-            up(parIndex);
+        Node par = this.heap.get(parIndex);
+        if (this.lt(elt, par)) {
+            this.heap.set(index, par);
+            this.heap.set(parIndex, elt);
+            this.up(parIndex);
         }
     }
 
     private void down(int parIndex) {
-        T par = heap.get(parIndex);
+        Node par = this.heap.get(parIndex);
         int c1Index = 2 * parIndex + 1;
         int c2Index = 2 * parIndex + 2;
-        if (c1Index >= heap.size()) {
+        if (c1Index >= this.heap.size()) {
             return;
         }
-        T c1 = heap.get(c1Index);
-        if (c2Index >= heap.size() && gt(par, c1)) {
-            heap.set(parIndex, c1);
-            heap.set(c1Index, par);
+        Node c1 = this.heap.get(c1Index);
+        if (c2Index >= this.heap.size()) {
+            if (this.gt(par, c1)) {
+                this.heap.set(parIndex, c1);
+                this.heap.set(c1Index, par);
+            }
             return;
         }
-        T c2 = heap.get(c2Index);
-        if (gt(par, c1) || gt(par, c2)) {
-            if (lt(c1, c2)) {
-                heap.set(parIndex, c1);
-                heap.set(c1Index, par);
-                down(c1Index);
+        Node c2 = this.heap.get(c2Index);
+        if (this.gt(par, c1) || this.gt(par, c2)) {
+            if (this.lt(c1, c2)) {
+                this.heap.set(parIndex, c1);
+                this.heap.set(c1Index, par);
+                this.down(c1Index);
             } else {
-                heap.set(parIndex, c2);
-                heap.set(c2Index, par);
-                down(c2Index);
+                this.heap.set(parIndex, c2);
+                this.heap.set(c2Index, par);
+                this.down(c2Index);
             }
         }
     }
