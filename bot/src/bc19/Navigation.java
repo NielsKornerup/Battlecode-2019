@@ -51,16 +51,14 @@ public class Navigation {
 
     private ArrayList<Point> getAdjacentDeltas() {
         ArrayList<Point> deltas = new ArrayList<>();
-        for (int dx = -1; dx <= 1; dx++) {
-            for (int dy = -1; dy <= 1; dy++) {
+        for (int dx = -1 * maxDistance; dx <= maxDistance; dx++) {
+            for (int dy = -1 * maxDistance; dy <= maxDistance; dy++) {
                 if(dx == 0 && dy == 0) {
                     continue;
                 }
-                /*
                 if((dx * dx + dy * dy) > (maxDistance * maxDistance)) {
                     continue;
                 }
-                */
                 deltas.add(new Point(dx, dy));
             }
         }
