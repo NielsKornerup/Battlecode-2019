@@ -34,6 +34,8 @@ public class Constants {
 	public static final int NUM_AGGRESSIVE_SCOUT_UNITS_TO_BUILD = 1;
 
 	public static final int MAX_NUM_CASTLES = 3;
+	public static final int TURNS_BEFORE_DONE_RECEIVING_ENEMY_CASTLE_LOCATIONS = MAX_NUM_CASTLES - 1;
+
 	public static final int MIN_CHURCH_BUILD_DISTANCE = 4;
 
 	public static final double PILGRIM_PERCENTAGE_THRESHOLD_TO_DROP_OFF_FIRST = .3;

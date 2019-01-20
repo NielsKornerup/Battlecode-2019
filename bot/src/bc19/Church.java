@@ -7,7 +7,7 @@ public class Church {
         int numEnemyPilgrims = Utils.getRobotsInRange(r, r.SPECS.PILGRIM, false, 0, 1000).size();
         int numFriendlyProphets = Utils.getRobotsInRange(r, r.SPECS.PROPHET, true, 0, 1000).size();
         if (numEnemyPilgrims > 0 && numFriendlyProphets < 1) {
-            return Utils.tryAndBuildInRandomSpace(r, r.SPECS.PROPHET); // TODO spawn on side of church closer to enemy
+            return Utils.tryAndBuildInOptimalSpace(r, r.SPECS.PROPHET);
         }
 
         return null;

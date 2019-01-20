@@ -431,10 +431,14 @@ public class Utils {
     }
     // Must be called immediately after spawning to work
 
-    public static Point getCastleLocation(MyRobot r) {
-        // TODO make work with Churches too
-        Point initialCastleDelta = Utils.getAdjacentUnitDeltas(r, r.SPECS.CASTLE, true).get(0);
-        return new Point(r.me.x + initialCastleDelta.x, r.me.y + initialCastleDelta.y);
+    public static Point getSpawningCastleOrChurchLocation(MyRobot r) {
+        List<Point> initialCastleDeltas = Utils.getAdjacentUnitDeltas(r, r.SPECS.CASTLE, true);
+        initialCastleDeltas.addAll(Utils.getAdjacentUnitDeltas(r, r.SPECS.CHURCH, true));
+        if (initialCastleDeltas.size() > 0) {
+            Point initialCastleDelta = initialCastleDeltas.get(0);
+            return new Point(r.me.x + initialCastleDelta.x, r.me.y + initialCastleDelta.y);
+        }
+        return null;
     }
 
 	public static List<Point> getFuelPoints(MyRobot r) {
