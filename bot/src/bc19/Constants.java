@@ -40,5 +40,5 @@ public class Constants {
 
 	public static final double PILGRIM_PERCENTAGE_THRESHOLD_TO_DROP_OFF_FIRST = .3;
 
-	public static final int ATTACK_TURN = 850;
+	public static final int ATTACK_TURN = 800;
 }
