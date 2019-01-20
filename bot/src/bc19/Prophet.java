@@ -116,6 +116,10 @@ public class Prophet {
     }
 
     private static void invalidateEnemyCastleTargetsIfNecessary(MyRobot r) {
+        if (enemyCastleMap == null) {
+            return;
+        }
+
         List<Point> targets = enemyCastleMap.getTargets();
 
         Point myLoc = new Point(r.me.x, r.me.y);
