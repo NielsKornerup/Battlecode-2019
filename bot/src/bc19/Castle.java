@@ -5,9 +5,9 @@ import java.util.*;
 public class Castle {
     private static final int CASTLE_ATTACK_RADIUS_SQ = 64;
     private static int initialPilgrimsBuilt = 0;
-	
+
     public static int CASTLE_MAX_INITIAL_PILGRIMS = 5;
-	
+
     private static int numFuelWorkers=0;
     private static int numKarbWorkers=0;
     private static HashMap<Integer, Point> pilgrimToTarget = new HashMap<>();
@@ -20,50 +20,50 @@ public class Castle {
      */
 
     private static void computeNumPilgrimsToBuild(MyRobot r) {
-    	boolean[][] karbMap = r.karboniteMap;
-    	boolean[][] fuelMap = r.fuelMap;
-    	int count = 0;
-    	for(int y = 0; y < karbMap.length; y++) {
-    		for(int x = 0; x < karbMap[y].length; x++) {
-    			if(karbMap[y][x] || fuelMap[y][x]) {
-    				count++;
-    			}
-    		}
-    	}
-    	CASTLE_MAX_INITIAL_PILGRIMS = count/(2*(1+otherEnemyCastleLocations.size()));
+        boolean[][] karbMap = r.karboniteMap;
+        boolean[][] fuelMap = r.fuelMap;
+        int count = 0;
+        for(int y = 0; y < karbMap.length; y++) {
+            for(int x = 0; x < karbMap[y].length; x++) {
+                if(karbMap[y][x] || fuelMap[y][x]) {
+                    count++;
+                }
+            }
+        }
+        CASTLE_MAX_INITIAL_PILGRIMS = count/(2*(1+otherEnemyCastleLocations.size()));
     }
 
     private static void populateTargets(MyRobot r) {
-    	ArrayList<Point> mySpot = new ArrayList<>();
-    	mySpot.add(Utils.getLocation(r.me));
-    	Navigation myMap = new Navigation(r, r.getPassableMap(), mySpot);
-    	List<Point> karbPoints = computeKarbPoints(r);
-    	List<Point> fuelPoints = computeFuelPoints(r);
-    	
-    	//TODO: make this fast with sorting
-    	while(karbPoints.size() > 0 || fuelPoints.size() > 0) {
-    		if(karbPoints.size()> 0 && (fuelPoints.size()==0 || targets.size()%2 ==0)) {
-    			int bestIndex = 0;
-    			for(int index = 1; index < karbPoints.size(); index++) {
-    				if(myMap.getPotential(karbPoints.get(index)) < myMap.getPotential(karbPoints.get(bestIndex))) {
-    					bestIndex = index;
-    				}
-    			}
-    			targets.add(karbPoints.get(bestIndex));
-    			karbPoints.remove(bestIndex);
-    		} else {
-    			int bestIndex = 0;
-    			for(int index = 1; index < fuelPoints.size(); index++) {
-    				if(myMap.getPotential(fuelPoints.get(index)) < myMap.getPotential(fuelPoints.get(bestIndex))) {
-    					bestIndex = index;
-    				}
-    			}
-    			targets.add(fuelPoints.get(bestIndex));
-    			fuelPoints.remove(bestIndex);
-    		}
-    	}
+        ArrayList<Point> mySpot = new ArrayList<>();
+        mySpot.add(Utils.getLocation(r.me));
+        Navigation myMap = new Navigation(r, r.getPassableMap(), mySpot);
+        List<Point> karbPoints = computeKarbPoints(r);
+        List<Point> fuelPoints = computeFuelPoints(r);
+
+        //TODO: make this fast with sorting
+        while(karbPoints.size() > 0 || fuelPoints.size() > 0) {
+            if(karbPoints.size()> 0 && (fuelPoints.size()==0 || targets.size()%2 ==0)) {
+                int bestIndex = 0;
+                for(int index = 1; index < karbPoints.size(); index++) {
+                    if(myMap.getPotential(karbPoints.get(index)) < myMap.getPotential(karbPoints.get(bestIndex))) {
+                        bestIndex = index;
+                    }
+                }
+                targets.add(karbPoints.get(bestIndex));
+                karbPoints.remove(bestIndex);
+            } else {
+                int bestIndex = 0;
+                for(int index = 1; index < fuelPoints.size(); index++) {
+                    if(myMap.getPotential(fuelPoints.get(index)) < myMap.getPotential(fuelPoints.get(bestIndex))) {
+                        bestIndex = index;
+                    }
+                }
+                targets.add(fuelPoints.get(bestIndex));
+                fuelPoints.remove(bestIndex);
+            }
+        }
     }
-    
+
     private static List<Point> computeKarbPoints(MyRobot r) {
         boolean[][] karboniteMap = r.getKarboniteMap();
 
@@ -176,48 +176,48 @@ public class Castle {
     }
 
     public static Action act(MyRobot r) {
-    	if(r.turn == 1) {
-    		populateTargets(r);
-    	}
+        if(r.turn == 1) {
+            populateTargets(r);
+        }
 
-    	handleCastleTalk(r);
+        handleCastleTalk(r);
 
         // Finish up broadcasting if necessary
-    	boolean alreadyBroadcastedEnemyCastleLocation = false;
-    	if (enemyCastleLocationIndex < otherEnemyCastleLocations.size()) {
+        boolean alreadyBroadcastedEnemyCastleLocation = false;
+        if (enemyCastleLocationIndex < otherEnemyCastleLocations.size()) {
             broadcastEnemyCastleLocation(r);
             alreadyBroadcastedEnemyCastleLocation = true;
         }
-    	
-    	//TODO: code this constant for the max range
-    	List<Robot> robots = Utils.getRobotsInRange(r, r.SPECS.PILGRIM, true, 0, 5);
-    	for(Robot rob: robots) {
-    		Point target = CommunicationUtils.getPilgrimTargetForCastle(r, rob);
-    		if(target!=null) {
-    			pilgrimToTarget.put(rob.id, target);
-    		}
-    	}
-    	
-		Set<Integer> allRobots = new HashSet<>();
-		for(Robot rob: r.getVisibleRobots()) {
-			if(pilgrimToTarget.containsKey(rob.id)) {
-				allRobots.add(rob.id);
-			}
-		}
-    	
-    	for(Integer id: pilgrimToTarget.keySet()) {
-    		if(!allRobots.contains(id)) {
-    			targets.add(0, pilgrimToTarget.get(id));
-    			//TODO: get rid of this it will cause bugs
-    			initialPilgrimsBuilt--;
-    			pilgrimToTarget.remove(id);
-    		}
-    	}
-    	
+
+        //TODO: code this constant for the max range
+        List<Robot> robots = Utils.getRobotsInRange(r, r.SPECS.PILGRIM, true, 0, 5);
+        for(Robot rob: robots) {
+            Point target = CommunicationUtils.getPilgrimTargetForCastle(r, rob);
+            if(target!=null) {
+                pilgrimToTarget.put(rob.id, target);
+            }
+        }
+
+        Set<Integer> allRobots = new HashSet<>();
+        for(Robot rob: r.getVisibleRobots()) {
+            if(pilgrimToTarget.containsKey(rob.id)) {
+                allRobots.add(rob.id);
+            }
+        }
+
+        for(Integer id: pilgrimToTarget.keySet()) {
+            if(!allRobots.contains(id)) {
+                targets.add(0, pilgrimToTarget.get(id));
+                //TODO: get rid of this it will cause bugs
+                initialPilgrimsBuilt--;
+                pilgrimToTarget.remove(id);
+            }
+        }
+
         // 1. Build our initial pilgrims if we haven't built them yet.
         if (initialPilgrimsBuilt < CASTLE_MAX_INITIAL_PILGRIMS) {
             CommunicationUtils.sendPilgrimInfoMessage(r, targets.get(0), 3);
-        	BuildAction action = Utils.tryAndBuildInRandomSpace(r, r.SPECS.PILGRIM);
+            BuildAction action = Utils.tryAndBuildInRandomSpace(r, r.SPECS.PILGRIM);
             if (action != null) {
                 initialPilgrimsBuilt++;
                 //TODO: is the 3 right?
@@ -229,8 +229,17 @@ public class Castle {
 
         // TODO implement logic/heuristics to prevent existing units from starving Castle of building opportunities
 
+
+        // 2. Spam crusaders at end of game
+        if (r.turn > Constants.CASTLE_SPAM_CRUSADERS_TURN) {
+            BuildAction action = Utils.tryAndBuildInRandomSpace(r, r.SPECS.CRUSADER);
+            if (action != null) {
+                return action;
+            }
+        }
+
         // 3. Build a prophet.
-        if(r.turn > 50) {
+        if(r.turn > Constants.CASTLE_SPAM_PROPHETS_TURN) {
             BuildAction action = Utils.tryAndBuildInRandomSpace(r, r.SPECS.PROPHET);
             if (action != null) {
                 enemyCastleLocationIndex = 0;

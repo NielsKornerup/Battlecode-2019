@@ -22,4 +22,9 @@ public class Constants {
 	public static final int PILGRIM_FUEL_PER_MOVE = 1;
 	public static final int PROPHET_FUEL_PER_MOVE = 2;
 	public static final int PREACHER_FUEL_PER_MOVE = 3;
+
+	public static final int CASTLE_SPAM_CRUSADERS_TURN = 800;
+	public static final int CASTLE_SPAM_PROPHETS_TURN = 50;
+
+	public static final int CRUSADER_ATTACK_RADIUS = 4;
 }
