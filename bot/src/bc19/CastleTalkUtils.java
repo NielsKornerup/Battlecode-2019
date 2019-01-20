@@ -29,8 +29,17 @@ public class CastleTalkUtils {
         sendCastleTalk(r, message);
     }
 
-    public static void sendEnemyCastleKilled(MyRobot r, Point enemyCastleLocation) {
+    public static boolean enemyCastleKilled(MyRobot r, Robot other) {
+        return instructionMatches(ENEMY_CASTLE_KILLED_MASK, other.castle_talk);
+    }
 
+    public static boolean enemyCastleKilledLocationMatches(MyRobot r, Robot other, Point position) {
+        return (position.x ^ position.y) == (other.castle_talk % (0b1 << ARGUMENT_SIZE_BITS));
+    }
+
+    public static void sendEnemyCastleKilled(MyRobot r, Point enemyCastleLocation) {
+        byte message = (byte) (ENEMY_CASTLE_KILLED_MASK | ((byte) (enemyCastleLocation.x ^ enemyCastleLocation.y)));
+        sendCastleTalk(r, message);
     }
 
 }
