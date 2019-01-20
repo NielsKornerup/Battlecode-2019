@@ -2,6 +2,7 @@ package bc19;
 
 import java.util.ArrayList;
 import java.util.HashMap;
+import java.util.List;
 
 public class Prophet {
     private static HashMap<Integer, ArrayList<Point>> ringLocations = new HashMap<>();
@@ -22,6 +23,9 @@ public class Prophet {
 
     private static Point initialCastleLocation;
     private static Point enemyCastleLocation;
+    private static HashMap<Point, Integer> otherEnemyCastleLocations = new HashMap<>(); // Maps from Point to bullshit
+
+    private static final int TURNS_BEFORE_DONE_RECEIVING_ENEMY_CASTLE_LOCATIONS = 2;
 
     private static Point pickRingTarget(MyRobot r) {
         ArrayList<Point> pointsInRing = ringLocations.get(ring);
@@ -79,13 +83,12 @@ public class Prophet {
     }
 
 
-    private static void computeMaps(MyRobot r) {
-        // We use our current castle location to infer the enemy's castle location. This is then used for Dijkstra map.
-        // TODO: this means that a unit is not aware of all castles, which can be problematic.
-        // we may need to remove this assumption at some point, especially if we're using
-        //  Churches (since there are no guaranteed enemy counterparts to those)
+    private static void computeEnemyCastlesMap(MyRobot r) {
         ArrayList<Point> targets = new ArrayList<>();
-        targets.add(Utils.getMirroredPosition(r, new Point(r.me.x, r.me.y)));
+        targets.add(enemyCastleLocation);
+        for (Point location : otherEnemyCastleLocations.keySet()) {
+            targets.add(location);
+        }
         enemyCastleMap = new Navigation(r, r.getPassableMap(), targets);
     }
 
@@ -98,21 +101,64 @@ public class Prophet {
     }
 
     private static void doFirstTurnActions(MyRobot r) {
-        computeMaps(r);
         initialCastleLocation = Utils.getCastleLocation(r);
         enemyCastleLocation = Utils.getMirroredPosition(r, initialCastleLocation);
         ringLocations = Utils.generateRingLocations(r, initialCastleLocation, enemyCastleLocation);
+    }
+
+    private static void getEnemyCastleLocations(MyRobot r) {
+        for (Robot robot : Utils.getAdjacentRobots(r, r.SPECS.CASTLE, true)) {
+            if (CommunicationUtils.receivedEnemyCastleLocation(r, robot)) {
+                Point location = CommunicationUtils.getEnemyCastleLocation(r, robot);
+                otherEnemyCastleLocations.put(location, 0);
+            }
+        }
+    }
+
+    private static void invalidateEnemyCastleTargetsIfNecessary(MyRobot r) {
+        List<Point> targets = enemyCastleMap.getTargets();
+
+        Point myLoc = new Point(r.me.x, r.me.y);
+        for (Point target : targets) {
+            if (Utils.computeSquareDistance(target, myLoc) > Utils.mySpecs(r).VISION_RADIUS) {
+                continue;
+            }
+            boolean foundCastle = false;
+            for (Robot robot : Utils.getRobotsInRange(r, r.SPECS.CASTLE, false, 0, 10000)) {
+                if (new Point(robot.x, robot.y).equals(target)) {
+                    foundCastle = true;
+                }
+            }
+            if (!foundCastle) {
+                r.log(".......... Enemy castle is dead. Removing from map.");
+                enemyCastleMap.removeTarget(target);
+                enemyCastleMap.recalculateDistanceMap();
+            }
+        }
     }
 
     public static Action act(MyRobot r) {
         if (r.turn == 1) {
             doFirstTurnActions(r);
         }
+        if (r.turn < TURNS_BEFORE_DONE_RECEIVING_ENEMY_CASTLE_LOCATIONS) {
+            getEnemyCastleLocations(r);
+        } else if (r.turn == TURNS_BEFORE_DONE_RECEIVING_ENEMY_CASTLE_LOCATIONS) {
+            computeEnemyCastlesMap(r);
+        } else {
+            // Invalidate any Dijkstra map targets that are stale
+            invalidateEnemyCastleTargetsIfNecessary(r);
+        }
 
         // 1. Attack enemies if nearby
         AttackAction attackAction = Utils.tryAndAttack(r, Utils.mySpecs(r).ATTACK_RADIUS[1]);
         if (attackAction != null) {
             return attackAction;
+        }
+
+        if (r.turn < TURNS_BEFORE_DONE_RECEIVING_ENEMY_CASTLE_LOCATIONS) {
+            // Wait for castle to finish broadcasting enemy castle locations before moving
+            return null;
         }
 
         // 2. Do either turtling or attacking actions
