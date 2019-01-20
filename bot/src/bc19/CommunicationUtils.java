@@ -7,7 +7,6 @@ public class CommunicationUtils {
 	private static final int ARGUMENT_SIZE_BITS = 13;
 
 	static final short PILGRIM_TARGET_MASK = (short) (0b111 << ARGUMENT_SIZE_BITS);
-	static final short CASTLE_INFORM_MASK = (short) (0b110 << ARGUMENT_SIZE_BITS);
 	static final short PROPHET_BUMP_MASK = (short) (0b101 << ARGUMENT_SIZE_BITS);
 	static final short PROPHET_ATTACK_MASK = (short) (0b100 << ARGUMENT_SIZE_BITS);
 	static final short ENEMY_CASTLE_LOCATION_MASK = (short) (0b011 << ARGUMENT_SIZE_BITS);
@@ -83,33 +82,18 @@ public class CommunicationUtils {
 		return false;
 	}
 
-	public static void sendPilgrimInfoMessage(MyRobot r, Point target, int range) {
+	public static void sendPilgrimTargetMessage(MyRobot r, Point target, int range) {
 		short message = (short) (PILGRIM_TARGET_MASK | ((short) target.x << 6) | ((short) target.y));
 		sendBroadcast(r, message, range);
 	}
 
 	/*
-	 * Returns a point for the pilgrim to target from a passed in castle
+	 * Returns a point that a pilgrim is targeting
 	 * 
 	 * @Return null if the robot is not signaling or if it is the wrong message type
 	 */
 	public static Point getPilgrimTargetInfo(MyRobot r, Robot other) {
 		if (r.isRadioing(other) && instructionMatches(PILGRIM_TARGET_MASK, other.signal)) {
-			short message = (short) other.signal;
-			return new Point((message / (64)) % 64, message % 64);
-		}
-		r.log("failed to get target info. isRadioing: " + r.isRadioing(other) + " found mask "
-				+ ((short) (other.signal >>> ARGUMENT_SIZE_BITS)) + " wanted mask " + (PILGRIM_TARGET_MASK >>> ARGUMENT_SIZE_BITS));
-		return null;
-	}
-
-	public static void sendPilgrimInfoToCastle(MyRobot r, Point target, int range) {
-		short message = (short) (CASTLE_INFORM_MASK + (target.x << 6) + target.y);
-		sendBroadcast(r, message, range);
-	}
-	
-	public static Point getPilgrimTargetForCastle(MyRobot r, Robot other) {
-		if (r.isRadioing(other) && instructionMatches(CASTLE_INFORM_MASK, other.signal)) {
 			short message = (short) other.signal;
 			return new Point((message / (64)) % 64, message % 64);
 		}

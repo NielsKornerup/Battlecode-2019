@@ -261,7 +261,7 @@ public class Utils {
             	if(dx==0 && dy==0) {
             		continue;
             	}
-            	if(hasResource(r, new Point(r.me.x + dx, r.me.y + dy))) {
+            	if(hasResource(r, new Point(p.x + dx, p.y + dy))) {
             		count++;
             	}
             }

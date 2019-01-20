@@ -54,12 +54,12 @@ public class PriorityQueue {
         return last;
     }
 
-    public boolean delete(Node n) {
+    public boolean delete(Point p) {
         if (this.heap.size() == 0) {
             return false;
         }
         for (int i = 0; i < this.heap.size(); i++) {
-            if (n.p.x == this.heap.get(i).p.x && n.p.y == this.heap.get(i).p.y) {
+            if (p.x == this.heap.get(i).p.x && p.y == this.heap.get(i).p.y) {
                 if (this.heap.size() - 1 == i) {
                     this.heap.remove(i);
                 } else {

@@ -1,6 +1,7 @@
 package bc19;
 
 import java.util.ArrayList;
+import java.util.HashMap;
 import java.util.HashSet;
 import java.util.List;
 import java.util.Set;
@@ -8,9 +9,59 @@ import java.util.Set;
 public class Pilgrim {
 
     static Navigation targetMap;
+    static Point target;
     static Navigation castleMap;
     static State state = State.GATHERING;
     static Set<Point> knownTargets = new HashSet<>();
+    private static PriorityQueue targets = new PriorityQueue();
+    private static HashMap<Integer, Boolean> pilgrimsTalkedTo = new HashMap<>();
+
+    private static void populateTargets(MyRobot r) {
+    	ArrayList<Point> mySpot = new ArrayList<>();
+    	mySpot.add(Utils.getLocation(r.me));
+    	Navigation myMap = new Navigation(r, r.getPassableMap(), mySpot);
+    	List<Point> karbPoints = computeKarbPoints(r);
+    	List<Point> fuelPoints = computeFuelPoints(r);
+    	
+    	for(Point p : karbPoints) {
+    		targets.enqueue(new Node(myMap.getPotential(p), p));
+    	}
+    	for(Point p : fuelPoints) {
+    		targets.enqueue(new Node(myMap.getPotential(p), p));
+    	}
+    }
+    
+    private static List<Point> computeKarbPoints(MyRobot r) {
+        boolean[][] karboniteMap = r.getKarboniteMap();
+
+        List<Point> targets = new ArrayList<>();
+        for (int y = 0; y < karboniteMap.length; y++) {
+            for (int x = 0; x < karboniteMap[y].length; x++) {
+                if (karboniteMap[y][x]) {
+                    targets.add(new Point(x, y));
+                }
+            }
+        }
+
+        return targets;
+    }
+
+    private static List<Point> computeFuelPoints(MyRobot r) {
+        boolean[][] fuelMaps = r.getFuelMap();
+
+        List<Point> targets = new ArrayList<>();
+        for (int y = 0; y < fuelMaps.length; y++) {
+            for (int x = 0; x < fuelMaps[y].length; x++) {
+                if (fuelMaps[y][x]) {
+                    targets.add(new Point(x, y));
+                }
+            }
+        }
+
+        return targets;
+    }
+
+
     
     public enum State {
         GATHERING,
@@ -47,24 +98,61 @@ public class Pilgrim {
 
     public static Action act(MyRobot r) {
         if (r.turn == 1) {
+        	populateTargets(r);
         	ArrayList<Robot> adjacentCastles = Utils.getAdjacentRobots(r, r.SPECS.CASTLE, true);
-        	//TODO: what if there are multiple adj castles? (unlikely)
-        	Point target = CommunicationUtils.getPilgrimTargetInfo(r, adjacentCastles.get(0));
-            computeMaps(r, target);
+        	target = targets.dequeue().p;
+        	computeMaps(r, target);
             state = State.GATHERING;
-            
-            //TODO: Make sure we don't go out of range. That could cause a bug.
-            CommunicationUtils.sendPilgrimInfoToCastle(r, target, 5);
         }
+        
+        
         
         List<Robot> nearbyCastles = Utils.getRobotsInRange(r, r.SPECS.CASTLE, true, 0, Utils.mySpecs(r).VISION_RADIUS);
         List<Robot> nearbyChurches = Utils.getRobotsInRange(r, r.SPECS.CHURCH, true, 0, Utils.mySpecs(r).VISION_RADIUS);
-        boolean foundNewTarget = false;
+        //TODO: make this a constant
+        List<Robot> nearbyPilgrims = Utils.getRobotsInRange(r, r.SPECS.PILGRIM, true, 0, 2);
+
+        boolean needNewTarget = false;
+        for(Robot rob: nearbyPilgrims) {
+        	Point robTarget = CommunicationUtils.getPilgrimTargetInfo(r, rob);
+        	if(target.equals(robTarget)) {
+        		needNewTarget = true;
+        	}
+        	targets.delete(Utils.getLocation(rob));
+        }
+        
+        //TODO: what if we run out of targets?
+        if(needNewTarget) {
+        	pilgrimsTalkedTo = new HashMap<>();
+        	Point oldTarget = target;
+        	target = targets.dequeue().p;
+        	Pilgrim.computeTargetMap(r, target);
+        	if(r.me.karbonite > Utils.mySpecs(r).KARBONITE_CAPACITY/3 || r.me.karbonite > Utils.mySpecs(r).FUEL_CAPACITY/3) {
+        		state = State.MOVING_RESOURCE_HOME;
+        	}
+        	r.log("old target " + oldTarget + " my new target is " + target);
+        }
+        
+        boolean foundMessageTarget = false;
+        for(Robot rob: nearbyPilgrims) {
+        	if(!pilgrimsTalkedTo.containsKey(rob.id)) {
+        		pilgrimsTalkedTo.put(rob.id, true);
+        		foundMessageTarget = true;
+        	}
+        }
+        
+        //TODO: no hard constants
+        if(foundMessageTarget) {
+        	r.log("found someone to com with");
+        	CommunicationUtils.sendPilgrimTargetMessage(r, target, 2);
+        }
+        
+        boolean foundNewChurchOrCastle = false;
         for(Robot rob: nearbyCastles) {
         	if(!knownTargets.contains(Utils.getLocation(rob))) {
         		knownTargets.add(Utils.getLocation(rob));
         		castleMap.addTarget(Utils.getLocation(rob));
-        		foundNewTarget = true;
+        		foundNewChurchOrCastle = true;
         	}
         }
 
@@ -72,11 +160,11 @@ public class Pilgrim {
         	if(!knownTargets.contains(Utils.getLocation(rob))) {
         		knownTargets.add(Utils.getLocation(rob));
         		castleMap.addTarget(Utils.getLocation(rob));
-        		foundNewTarget = true;
+        		foundNewChurchOrCastle = true;
         	}
         }
         
-        if(foundNewTarget) {
+        if(foundNewChurchOrCastle) {
         	castleMap.recalculateDistanceMap();
         }
         
@@ -93,6 +181,7 @@ public class Pilgrim {
             			for(int index = 0; index < locations.size(); index++) {
             				Point loc = locations.get(index);
             				loc = new Point(r.me.x + loc.x, r.me.y + loc.y);
+            				r.log("loc is " + loc + " and it has resources? " + Utils.hasResource(r, loc)+ " adj tiles with resources is " + Utils.getAdjacentResourceCount(r, loc));
             				if(Utils.hasResource(r, loc)) {
             					continue;
             				}
@@ -100,6 +189,7 @@ public class Pilgrim {
             					maxIndex = index;
             					continue;
             				}
+            				
             				Point best = locations.get(maxIndex);
             				best = new Point(r.me.x + best.x, r.me.y + best.y);
             				if(Utils.getAdjacentResourceCount(r, loc) > Utils.getAdjacentResourceCount(r, best)) {
@@ -131,6 +221,10 @@ public class Pilgrim {
 
         if (state == State.MOVING_RESOURCE_HOME) {
             // Check if next to Castles or churches
+        	if(castleMap.getPotential(Utils.getLocation(r.me)) == 0) {
+        		castleMap.removeTarget(Utils.getLocation(r.me));
+        		castleMap.recalculateDistanceMap();
+        	}
             ArrayList<Point> adjacentPlacesToDeposit = Utils.getAdjacentUnits(r, r.SPECS.CASTLE, true);
             adjacentPlacesToDeposit.addAll(Utils.getAdjacentUnits(r, r.SPECS.CHURCH, true));
             if (adjacentPlacesToDeposit.size() > 0) {
