@@ -222,36 +222,46 @@ public class Castle {
             broadcastEnemyCastleLocation(r);
             alreadyBroadcastedEnemyCastleLocation = true;
         }
-
-        //TODO: code this constant for the max range
-        List<Robot> robots = Utils.getRobotsInRange(r, r.SPECS.PILGRIM, true, 0, 5);
-        for(Robot rob: robots) {
-            Point target = CommunicationUtils.getPilgrimTargetForCastle(r, rob);
-            if(target!=null) {
-                pilgrimToTarget.put(rob.id, target);
+    	
+    	//TODO: code this constant for the max range
+    	List<Robot> robots = Utils.getRobotsInRange(r, r.SPECS.PILGRIM, true, 0, 5);
+    	for(Robot rob: robots) {
+    		Point target = CommunicationUtils.getPilgrimTargetForCastle(r, rob);
+    		if(target!=null) {
+    			pilgrimToTarget.put(rob.id, target);
+    		}
+    	}
+    	
+		Set<Integer> allRobots = new HashSet<>();
+		for(Robot rob: r.getVisibleRobots()) {
+			if(pilgrimToTarget.containsKey(rob.id)) {
+				allRobots.add(rob.id);
+			}
+		}
+    	
+    	for(Integer id: pilgrimToTarget.keySet()) {
+    		if(!allRobots.contains(id)) {
+    			targets.add(0, pilgrimToTarget.get(id));
+    			//TODO: get rid of this it will cause bugs
+    			initialPilgrimsBuilt--;
+    			pilgrimToTarget.remove(id);
+    		}
+    	}
+    	
+    	// 1. If we haven't built any aggressive scout units yet, build them.
+        if (numAggressiveScoutUnitsBuilt < Constants.NUM_AGGRESSIVE_SCOUT_UNITS_TO_BUILD) {
+            BuildAction action = Utils.tryAndBuildInOptimalSpace(r, r.SPECS.PROPHET);
+            if (action != null) {
+                CommunicationUtils.sendAggressiveScoutLocation(r, getContestedKarboniteGuardPoint(r));
+                numAggressiveScoutUnitsBuilt++;
+                return action;
             }
         }
-
-        Set<Integer> allRobots = new HashSet<>();
-        for(Robot rob: r.getVisibleRobots()) {
-            if(pilgrimToTarget.containsKey(rob.id)) {
-                allRobots.add(rob.id);
-            }
-        }
-
-        for(Integer id: pilgrimToTarget.keySet()) {
-            if(!allRobots.contains(id)) {
-                targets.add(0, pilgrimToTarget.get(id));
-                //TODO: get rid of this it will cause bugs
-                initialPilgrimsBuilt--;
-                pilgrimToTarget.remove(id);
-            }
-        }
-
-        // 1. Build our initial pilgrims if we haven't built them yet.
+    	
+        // 2. Build our initial pilgrims if we haven't built them yet.
         if (initialPilgrimsBuilt < CASTLE_MAX_INITIAL_PILGRIMS) {
             CommunicationUtils.sendPilgrimInfoMessage(r, targets.get(0), 3);
-            BuildAction action = Utils.tryAndBuildInRandomSpace(r, r.SPECS.PILGRIM);
+        	BuildAction action = Utils.tryAndBuildInOptimalSpace(r, r.SPECS.PILGRIM);
             if (action != null) {
                 initialPilgrimsBuilt++;
                 //TODO: is the 3 right?
@@ -263,7 +273,7 @@ public class Castle {
 
         // TODO implement logic/heuristics to prevent existing units from starving Castle of building opportunities
 
-        // 2. Spam crusaders at end of game
+        // 3. Spam crusaders at end of game
         if (r.turn > Constants.CASTLE_SPAM_CRUSADERS_TURN) {
             BuildAction action = Utils.tryAndBuildInRandomSpace(r, r.SPECS.CRUSADER);
             if (action != null) {
@@ -271,7 +281,7 @@ public class Castle {
             }
         }
 
-        // 3. If we haven't built any aggressive scout units yet, build them.
+        // 4. If we haven't built any aggressive scout units yet, build them.
         if (numAggressiveScoutUnitsBuilt < Constants.NUM_AGGRESSIVE_SCOUT_UNITS_TO_BUILD) {
             BuildAction action = Utils.tryAndBuildInRandomSpace(r, r.SPECS.PROPHET);
             if (action != null) {
@@ -281,7 +291,7 @@ public class Castle {
             }
         }
 
-        // 4. Build a prophet.
+        // 5. Build a prophet.
         if (r.turn <= 50) {
             // Only build a prophet if we've detected enemies nearby and there are no prophets
             int numEnemyPilgrims = Utils.getRobotsInRange(r, -1, false, 0, 1000).size();
@@ -300,7 +310,7 @@ public class Castle {
             }
         }
 
-        // 5. Finally, if we cannot build anything, attack if there are enemies in range.
+        // 6. Finally, if we cannot build anything, attack if there are enemies in range.
         AttackAction attackAction = Utils.tryAndAttack(r, CASTLE_ATTACK_RADIUS_SQ);
         if (attackAction != null) {
             return attackAction;

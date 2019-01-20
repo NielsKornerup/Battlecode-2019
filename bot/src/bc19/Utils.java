@@ -85,6 +85,31 @@ public class Utils {
         }
         return null;
     }
+    
+    public static BuildAction tryAndBuildInOptimalSpace(MyRobot r, int unitToBuild) {
+        ArrayList<Point> freeSpaces = Utils.getAdjacentFreeSpaces(r);
+        if (freeSpaces.size() == 0) {
+            return null;
+        }
+        Point bestPoint = freeSpaces.get(0);
+        
+        Point myLoc = new Point(r.me.x, r.me.y);
+    	Point enemyLoc = Utils.getMirroredPosition(r, myLoc);
+    	
+        int smallestDistance = 1000;
+        for (Point adj : freeSpaces){
+        	int dist = Utils.computeManhattanDistance(new Point(adj.x+myLoc.x, adj.y+myLoc.y), enemyLoc);
+        	if (dist<smallestDistance){
+        		smallestDistance = dist;
+        		bestPoint = adj;
+        	}
+        }
+        if (canBuild(r, unitToBuild)) {
+            return r.buildUnit(unitToBuild, bestPoint.x, bestPoint.y);
+        }
+        r.log("best spot: " + bestPoint.x + " " + bestPoint.y);
+        return null;
+    }
 
     public static Action moveDijkstra(MyRobot r, Navigation map, int radius) {
         Point delta = map.getNextMove(radius);
