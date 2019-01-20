@@ -2,6 +2,7 @@ package bc19;
 
 import java.util.ArrayList;
 import java.util.HashMap;
+import java.util.HashSet;
 
 public class Prophet {
     private static HashMap<Integer, ArrayList<Point>> ringLocations = new HashMap<>();
@@ -22,6 +23,7 @@ public class Prophet {
 
     private static Point initialCastleLocation;
     private static Point enemyCastleLocation;
+    private static HashMap<Point, Integer> otherEnemyCastleLocations = new HashMap<>(); // Maps from Point to bullshit
 
     private static Point pickRingTarget(MyRobot r) {
         ArrayList<Point> pointsInRing = ringLocations.get(ring);
@@ -104,9 +106,33 @@ public class Prophet {
         ringLocations = Utils.generateRingLocations(r, initialCastleLocation, enemyCastleLocation);
     }
 
+    private static void getEnemyCastleLocations(MyRobot r) {
+        for (Robot robot : Utils.getAdjacentRobots(r, r.SPECS.CASTLE, true)) {
+            if (CommunicationUtils.receivedEnemyCastleLocation(r, robot)) {
+                Point location = CommunicationUtils.getEnemyCastleLocation(r, robot);
+                otherEnemyCastleLocations.put(location, 0);
+            }
+        }
+    }
+
     public static Action act(MyRobot r) {
         if (r.turn == 1) {
             doFirstTurnActions(r);
+        }
+
+        getEnemyCastleLocations(r);
+
+        if (r.turn < 3) { // TODO should this be 3 instead?
+            // Wait for castle to finish broadcasting
+            return null;
+        }
+
+        if (r.turn == 3) {
+            r.log("[combat] Counterpart enemy castle location: " + enemyCastleLocation.x + " " + enemyCastleLocation.y);
+            r.log("[combat] Other enemy castle locations:");
+            for (Point point : otherEnemyCastleLocations.keySet()) {
+                r.log(point.x + " " + point.y);
+            }
         }
 
         // 1. Attack enemies if nearby
