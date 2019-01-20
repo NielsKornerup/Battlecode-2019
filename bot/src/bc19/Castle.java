@@ -65,9 +65,7 @@ public class Castle {
         // Check for enemy castle killed messages
         for (Robot robot : r.getVisibleRobots()) {
             if (CastleTalkUtils.enemyCastleKilled(r, robot)) {
-                r.log("Received enemy castle killed message");
                 // Figure out which one was killed
-                // TODO this removes the other two castles, but not the one we spawned at... this is problematic
                 Point pointToRemove = null;
                 for (Point point : enemyCastleLocations) {
                     if (CastleTalkUtils.enemyCastleKilledLocationMatches(r, robot, point)) {
@@ -96,9 +94,45 @@ public class Castle {
         handleEnemyCastleKilledMessages(r);
     }
 
+    private static void removeDeadFriendlyCastles(MyRobot r) {
+        Robot[] robots = r.getVisibleRobots();
+        int deadCastle = -1;
+        for (Integer castleId : otherCastleLocations.keySet()) {
+            boolean foundId = false;
+            for (Robot robot : robots) {
+                if (robot.id == castleId) {
+                    foundId = true;
+                }
+            }
+            if (!foundId) {
+                deadCastle = castleId;
+                break;
+            }
+        }
+        if (deadCastle != -1) {
+            r.log("Castle " + deadCastle + " has died.");
+            otherCastleLocations.remove(deadCastle);
+        }
+    }
+
     public static Action act(MyRobot r) {
 
         handleCastleTalk(r);
+        removeDeadFriendlyCastles(r);
+
+        // If it's close to the end of the game, and we're down Castles, send attack message!
+        if (r.turn >= Constants.ATTACK_TURN && r.turn % 50 == 0 && otherCastleLocations.size() + 1 < enemyCastleLocations.size()) {
+            r.log("It's late game... sending attack message.");
+            // TODO this propogates like a virus, which can waste fuel. Modify it to just send one global message
+            // TODO This involves making it save enough fuel late in the game which is why it hasn't been done yet
+            // Try to maximize our range
+            for (int i = 4; i > 0; i--) {
+                boolean sentSuccessfully = CommunicationUtils.sendAttackMessage(r, i * i);
+                if (sentSuccessfully) {
+                    break;
+                }
+            }
+        }
 
         // Finish up broadcasting enemy castle location if needed.
         boolean alreadyBroadcastedLocation = broadcastEnemyCastleLocationIfNeeded(r);

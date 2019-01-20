@@ -75,7 +75,15 @@ public class CommunicationUtils {
 	}
 
 	public static boolean sendAttackMessage(MyRobot r) {
-		return sendBroadcast(r, PROPHET_ATTACK_MASK, ATTACK_SIGNAL_RADIUS_SQ);
+		return sendAttackMessage(r, ATTACK_SIGNAL_RADIUS_SQ);
+	}
+
+	public static boolean sendAttackMessage(MyRobot r, int radiusSq) {
+		return sendBroadcast(r, PROPHET_ATTACK_MASK, radiusSq);
+	}
+
+	public static boolean sendGlobalAttackMessage(MyRobot r) {
+		return sendBroadcast(r, PROPHET_ATTACK_MASK, Ring.MAX_RING_LEVEL * Ring.MAX_RING_LEVEL);
 	}
 
 	public static boolean receivedAttackMessage(MyRobot r) {

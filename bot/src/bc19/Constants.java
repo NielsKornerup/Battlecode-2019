@@ -39,4 +39,6 @@ public class Constants {
 	public static final int MIN_CHURCH_BUILD_DISTANCE = 4;
 
 	public static final double PILGRIM_PERCENTAGE_THRESHOLD_TO_DROP_OFF_FIRST = .3;
+
+	public static final int ATTACK_TURN = 850;
 }
