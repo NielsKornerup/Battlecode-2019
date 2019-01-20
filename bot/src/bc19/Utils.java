@@ -12,7 +12,7 @@ public class Utils {
         Point bestPoint = null;
         int bestDistance = 100000;
         for (Point point : points) {
-            int newDistance = Math.abs(point.x - r.me.x) + Math.abs(point.y - r.me.y);
+            int newDistance = computeManhattanDistance(Utils.myLocation(r), new Point(point.x, point.y));
             if (newDistance < bestDistance) {
                 bestDistance = newDistance;
                 bestPoint = point;
@@ -93,7 +93,7 @@ public class Utils {
         }
         Point bestPoint = freeSpaces.get(0);
         
-        Point myLoc = new Point(r.me.x, r.me.y);
+        Point myLoc = Utils.myLocation(r);
     	Point enemyLoc = Utils.getMirroredPosition(r, myLoc);
     	
         int smallestDistance = 1000;
@@ -286,7 +286,7 @@ public class Utils {
         List<Robot> nearby = getRobotsInRange(r, -1, myTeam, minRadiusSq, maxRadiusSq);
         List<RobotSort> toSort = new ArrayList<>();
         for (Robot robot : nearby) {
-            int distanceSquared = computeSquareDistance(new Point(r.me.x, r.me.y), new Point(robot.x, robot.y));
+            int distanceSquared = computeSquareDistance(Utils.myLocation(r), new Point(robot.x, robot.y));
             RobotSort rob = new RobotSort(robot.id, robot.unit, robot.x, robot.y, distanceSquared, robot.health);
             toSort.add(rob);
         }
@@ -381,6 +381,10 @@ public class Utils {
     	return new Point(r.x, r.y);
     }
 
+    public static Point myLocation(MyRobot r) {
+        return new Point(r.me.x, r.me.y);
+    }
+
     public static HashMap<Integer, ArrayList<Point>> generateRingLocations(MyRobot r, Point castle, Point enemyCastle) {
         HashMap<Integer, ArrayList<Point>> ringLocations = new HashMap<>();
         boolean[][] passableMap = r.getPassableMap();
@@ -440,7 +444,7 @@ public class Utils {
 
     public static Point getContestedKarboniteGuardPoint(MyRobot r){
         List<Point> karb = getKarbonitePoints(r);
-        Point myLoc = new Point(r.me.x, r.me.y);
+        Point myLoc = Utils.myLocation(r);
         Point enemyLoc = Utils.getMirroredPosition(r, myLoc);
         int smallestDiff = 100000;
         Point bestPoint = null;

@@ -135,7 +135,7 @@ public class Navigation {
         int minDist = MAX_INT;
         Point bestDelta = null;
 
-        Point start = new Point(r.me.x, r.me.y);
+        Point start = Utils.myLocation(r);
         for (Point delta : possibleDeltas) {
             int newX = start.x + delta.x;
             int newY = start.y + delta.y;

@@ -50,7 +50,7 @@ public class Castle {
             otherCastleLocations.remove(r.me.id);
 
             // Populate our enemy castle locations
-            enemyCastleLocations.add(Utils.getMirroredPosition(r, new Point(r.me.x, r.me.y))); // Add counterpart
+            enemyCastleLocations.add(Utils.getMirroredPosition(r, Utils.myLocation(r))); // Add counterpart
             for (Integer id : otherCastleLocations.keySet()) {
                 enemyCastleLocations.add(Utils.getMirroredPosition(r, otherCastleLocations.get(id)));
             }

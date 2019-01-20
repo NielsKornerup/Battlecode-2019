@@ -125,7 +125,7 @@ public class Prophet {
 
         List<Point> targets = enemyCastleMap.getTargets();
 
-        Point myLoc = new Point(r.me.x, r.me.y);
+        Point myLoc = Utils.myLocation(r);
         for (Point target : targets) {
             if (Utils.computeSquareDistance(target, myLoc) > Utils.mySpecs(r).VISION_RADIUS) {
                 continue;
