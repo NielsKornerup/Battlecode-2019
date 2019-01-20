@@ -5,12 +5,34 @@ import java.util.*;
 public class Castle {
     private static final int CASTLE_ATTACK_RADIUS_SQ = 64;
     private static int initialPilgrimsBuilt = 0;
-    
+	
+    public static int CASTLE_MAX_INITIAL_PILGRIMS = 5;
+	
     private static int numFuelWorkers=0;
     private static int numKarbWorkers=0;
     private static HashMap<Integer, Point> pilgrimToTarget = new HashMap<>();
     private static ArrayList<Point> targets = new ArrayList<>();
 
+    private static HashMap<Integer, Point> castleLocations = new HashMap<>(); // Maps from unit ID to location
+    private static ArrayList<Point> enemyCastleLocations = new ArrayList<>();
+    
+    /*
+     * must get enemy castle locations before calling this
+     */
+    private static void computeNumPilgrimsToBuild(MyRobot r) {
+    	boolean[][] karbMap = r.karboniteMap;
+    	boolean[][] fuelMap = r.fuelMap;
+    	int count = 0;
+    	for(int y = 0; y < karbMap.length; y++) {
+    		for(int x = 0; x < karbMap[y].length; x++) {
+    			if(karbMap[y][x] || fuelMap[y][x]) {
+    				count++;
+    			}
+    		}
+    	}
+    	CASTLE_MAX_INITIAL_PILGRIMS = count/(2*(1+enemyCastleLocations.size()));
+    }
+    
     private static HashMap<Integer, Point> otherCastleLocations = new HashMap<>(); // Maps from unit ID to location
     private static ArrayList<Point> otherEnemyCastleLocations = new ArrayList<>(); // Doesn't include the enemy castle that mirrors ours
 
@@ -114,6 +136,15 @@ public class Castle {
             for (Integer id : otherCastleLocations.keySet()) {
                 otherEnemyCastleLocations.add(Utils.getMirroredPosition(r, otherCastleLocations.get(id)));
             }
+        } else if (r.turn == 5) {
+            // Print enemy castle locations
+            // Point enemy = Utils.getMirroredPosition(r, new Point(r.me.x, r.me.y));
+            // r.log("[castle] Counterpart enemy castle location: " + enemy.x + " " + enemy.y);
+            // r.log("[castle] Other enemy castle locations: ");
+            for (Point point : otherEnemyCastleLocations) {
+                r.log(point.x + " " + point.y);
+            }
+            Castle.computeNumPilgrimsToBuild(r);
         }
     }
 
@@ -165,7 +196,7 @@ public class Castle {
     	}
     	
         // 1. Build our initial pilgrims if we haven't built them yet.
-        if (initialPilgrimsBuilt < Constants.CASTLE_MAX_INITIAL_PILGRIMS) {
+        if (initialPilgrimsBuilt < CASTLE_MAX_INITIAL_PILGRIMS) {
             CommunicationUtils.sendPilgrimInfoMessage(r, targets.get(0), 3);
         	BuildAction action = Utils.tryAndBuildInRandomSpace(r, r.SPECS.PILGRIM);
             if (action != null) {
