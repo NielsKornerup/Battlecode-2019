@@ -27,4 +27,6 @@ public class Constants {
 	public static final int CASTLE_SPAM_PROPHETS_TURN = 50;
 
 	public static final int CRUSADER_ATTACK_RADIUS = 4;
+
+	public static final int NUM_AGGRESSIVE_SCOUT_UNITS_TO_BUILD = 1;
 }
