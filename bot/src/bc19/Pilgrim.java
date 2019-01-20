@@ -86,7 +86,7 @@ public class Pilgrim {
     	
     	//TODO: fix cannot read property 'y' of null caused by this
     	if(target == null) {
-    		r.log("cannot get target from castle because castle is dead");
+    		//r.log("cannot get target from castle because castle is dead");
     	}
     	targetMap = new Navigation(r, r.getPassableMap(), targetList);
     }
@@ -130,7 +130,7 @@ public class Pilgrim {
         	if(r.me.karbonite > Utils.mySpecs(r).KARBONITE_CAPACITY/3 || r.me.karbonite > Utils.mySpecs(r).FUEL_CAPACITY/3) {
         		state = State.MOVING_RESOURCE_HOME;
         	}
-        	r.log("old target " + oldTarget + " my new target is " + target);
+        	//r.log("old target " + oldTarget + " my new target is " + target);
         }
         
         boolean foundMessageTarget = false;
@@ -143,7 +143,7 @@ public class Pilgrim {
         
         //TODO: no hard constants
         if(foundMessageTarget) {
-        	r.log("found someone to com with");
+        	//r.log("found someone to com with");
         	CommunicationUtils.sendPilgrimTargetMessage(r, target, 2);
         }
         
@@ -181,7 +181,7 @@ public class Pilgrim {
             			for(int index = 0; index < locations.size(); index++) {
             				Point loc = locations.get(index);
             				loc = new Point(r.me.x + loc.x, r.me.y + loc.y);
-            				r.log("loc is " + loc + " and it has resources? " + Utils.hasResource(r, loc)+ " adj tiles with resources is " + Utils.getAdjacentResourceCount(r, loc));
+            				//r.log("loc is " + loc + " and it has resources? " + Utils.hasResource(r, loc)+ " adj tiles with resources is " + Utils.getAdjacentResourceCount(r, loc));
             				if(Utils.hasResource(r, loc)) {
             					continue;
             				}
