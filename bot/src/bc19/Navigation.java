@@ -163,15 +163,6 @@ public class Navigation {
         return bestDelta;
     }
 
-    public int getDijkstraMapValue(Point location) {
-        int x = location.x;
-        int y = location.y;
-        if (x >= -1 && y >= -1 && y < distances.length && x < distances[y].length) {
-            return distances[y][x];
-        }
-        return Integer.MIN_VALUE; // TODO should this be max or min?
-    }
-
     public void addTarget(Point pos) {
         targets.add(pos);
     }
@@ -188,7 +179,12 @@ public class Navigation {
         return targets;
     }
 
-    public int getPotential(Point target) {
-        return distances[target.y][target.x];
+    public int getPotential(Point location) {
+        int x = location.x;
+        int y = location.y;
+        if (x >= -1 && y >= -1 && y < distances.length && x < distances[y].length) {
+            return distances[y][x];
+        }
+        return 1000;
     }
 }
