@@ -110,6 +110,30 @@ public class Utils {
         return null;
     }
 
+    public static BuildAction tryAndBuildChurch(MyRobot r) {
+        List<Point> deltas = Utils.getAdjacentFreeSpaces(r);
+        if (deltas.size() == 0) {
+            return null;
+        }
+
+        // Build church in spot adjacent to the most resource deposits
+        Point bestDelta = deltas.get(0);
+        int bestResourceCount = 0;
+        for(Point delta : deltas) {
+            Point absolute = new Point(r.me.x + delta.x, r.me.y + delta.y);
+            if(Utils.hasResource(r, absolute)) {
+                continue;
+            }
+
+            int newResourceCount = Utils.getAdjacentResourceCount(r, absolute);
+            if(newResourceCount > bestResourceCount) {
+                bestResourceCount = newResourceCount;
+                bestDelta = delta;
+            }
+        }
+        return r.buildUnit(r.SPECS.CHURCH, bestDelta.x, bestDelta.y);
+    }
+
     public static Action moveDijkstra(MyRobot r, Navigation map, int radius) {
         Point delta = map.getNextMove(radius);
         if (delta != null) {

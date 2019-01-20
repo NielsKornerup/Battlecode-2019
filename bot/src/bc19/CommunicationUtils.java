@@ -12,6 +12,7 @@ public class CommunicationUtils {
 	static final short ENEMY_CASTLE_LOCATION_MASK = (short) (0b011 << ARGUMENT_SIZE_BITS);
 	static final short AGGRESSIVE_SCOUT_MASK = (short) (0b010 << ARGUMENT_SIZE_BITS);
 
+	public static final int PILGRIM_TARGET_RADIUS_SQ = 2;
 	private static final int ATTACK_SIGNAL_RADIUS_SQ = 5;
 	private static final int BUMP_SIGNAL_RADIUS_SQ = 2;
 	private static final int ENEMY_CASTLE_LOCATION_SQ = 2;
@@ -103,9 +104,9 @@ public class CommunicationUtils {
 		return false;
 	}
 
-	public static boolean sendPilgrimTargetMessage(MyRobot r, Point target, int range) {
+	public static boolean sendPilgrimTargetMessage(MyRobot r, Point target) {
 		short message = (short) (PILGRIM_TARGET_MASK | ((short) target.x << 6) | ((short) target.y));
-		return sendBroadcast(r, message, range);
+		return sendBroadcast(r, message, PILGRIM_TARGET_RADIUS_SQ);
 	}
 
 	/*
