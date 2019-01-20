@@ -275,7 +275,14 @@ public class Castle {
         }
 
         // 3. Build a prophet.
-        if(r.turn > 50) {
+        if (r.turn <= 50) {
+            // Only build a prophet if we've detected enemies nearby and there are no prophets
+            int numEnemyPilgrims = Utils.getRobotsInRange(r, -1, false, 0, 1000).size();
+            int numFriendlyProphets = Utils.getRobotsInRange(r, r.SPECS.PROPHET, true, 0, 1000).size();
+            if (numEnemyPilgrims > 0 && numFriendlyProphets < 1) {
+                return Utils.tryAndBuildInRandomSpace(r, r.SPECS.PROPHET); // TODO spawn on side of castle closer to enemy
+            }
+        } else if(r.turn > 50) {
             BuildAction action = Utils.tryAndBuildInRandomSpace(r, r.SPECS.PROPHET);
             if (action != null) {
                 enemyCastleLocationIndex = 0;
