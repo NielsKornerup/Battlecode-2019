@@ -15,4 +15,11 @@ public class Constants {
 	public static final int CRUSADER_UNIT_TYPE = 3;
 	public static final int PROPHET_UNIT_TYPE = 4;
 	public static final int PREACHER_UNIT_TYPE = 5;
+	public static final int MAX_INT = 9999999;
+
+
+	public static final int CRUSADER_FUEL_PER_MOVE = 1;
+	public static final int PILGRIM_FUEL_PER_MOVE = 1;
+	public static final int PROPHET_FUEL_PER_MOVE = 2;
+	public static final int PREACHER_FUEL_PER_MOVE = 3;
 }

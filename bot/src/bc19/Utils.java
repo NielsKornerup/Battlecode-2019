@@ -140,7 +140,19 @@ public class Utils {
 
     public static int getFuelCost(MyRobot r, int dx, int dy) {
         int rSquared = dx * dx + dy * dy;
-        return mySpecs(r).FUEL_PER_MOVE * rSquared;
+        int fuelPerMove = 1;
+        if (r.me.unit == r.SPECS.CRUSADER) {
+            fuelPerMove = Constants.CRUSADER_FUEL_PER_MOVE;
+        } else if (r.me.unit == r.SPECS.PILGRIM) {
+            fuelPerMove = Constants.PILGRIM_FUEL_PER_MOVE;
+        } else if (r.me.unit == r.SPECS.PREACHER) {
+            fuelPerMove = Constants.PREACHER_FUEL_PER_MOVE;
+        } else if (r.me.unit == r.SPECS.PROPHET) {
+            fuelPerMove = Constants.PROPHET_FUEL_PER_MOVE;
+        } else {
+            // TODO : IDK WHAT TO DO HERE??? \-_-/
+        }
+        return fuelPerMove * rSquared;
     }
 
     public static boolean enoughFuelToMove(MyRobot r, int dx, int dy) {
