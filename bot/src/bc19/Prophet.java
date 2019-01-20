@@ -8,7 +8,7 @@ public class Prophet {
     private static HashMap<Integer, ArrayList<Point>> ringLocations = new HashMap<>();
     private static Point ringTarget = null;
     private static final int RING_START = 3;
-    private static final int MAX_RING_LEVEL = 8;
+    private static final int MAX_RING_LEVEL = 20;
     private static int ring = RING_START;
 
     public enum State {

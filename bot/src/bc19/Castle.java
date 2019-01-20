@@ -13,12 +13,12 @@ public class Castle {
     private static HashMap<Integer, Point> pilgrimToTarget = new HashMap<>();
     private static ArrayList<Point> targets = new ArrayList<>();
 
-    private static HashMap<Integer, Point> castleLocations = new HashMap<>(); // Maps from unit ID to location
-    private static ArrayList<Point> enemyCastleLocations = new ArrayList<>();
-    
+    private static HashMap<Integer, Point> otherCastleLocations = new HashMap<>(); // Maps from unit ID to location
+    private static ArrayList<Point> otherEnemyCastleLocations = new ArrayList<>(); // Doesn't include the enemy castle that mirrors ours
     /*
      * must get enemy castle locations before calling this
      */
+
     private static void computeNumPilgrimsToBuild(MyRobot r) {
     	boolean[][] karbMap = r.karboniteMap;
     	boolean[][] fuelMap = r.fuelMap;
@@ -30,11 +30,8 @@ public class Castle {
     			}
     		}
     	}
-    	CASTLE_MAX_INITIAL_PILGRIMS = count/(2*(1+enemyCastleLocations.size()));
+    	CASTLE_MAX_INITIAL_PILGRIMS = count/(2*(1+otherEnemyCastleLocations.size()));
     }
-    
-    private static HashMap<Integer, Point> otherCastleLocations = new HashMap<>(); // Maps from unit ID to location
-    private static ArrayList<Point> otherEnemyCastleLocations = new ArrayList<>(); // Doesn't include the enemy castle that mirrors ours
 
     private static void populateTargets(MyRobot r) {
     	ArrayList<Point> mySpot = new ArrayList<>();
@@ -156,12 +153,34 @@ public class Castle {
         }
     }
 
+    private static void handleCastleTalk(MyRobot r) {
+        getAllCastleLocations(r);
+
+        // Check for enemy castle killed messages
+        for (Robot robot : r.getVisibleRobots()) {
+            if (CastleTalkUtils.enemyCastleKilled(r, robot)) {
+                r.log("Received enemy castle killed message");
+                // Figure out which one was killed
+                // TODO this removes the other two castles, but not the one we spawned at... this is problematic
+                int idToRemove = -1;
+                for (Integer id : otherCastleLocations.keySet()) {
+                    Point location = otherCastleLocations.get(id);
+                    if (CastleTalkUtils.enemyCastleKilledLocationMatches(r, robot, location)) {
+                        idToRemove = id;
+                    }
+                }
+                r.log("Removing castle with id " + idToRemove);
+                otherCastleLocations.remove(idToRemove);
+            }
+        }
+    }
+
     public static Action act(MyRobot r) {
     	if(r.turn == 1) {
     		populateTargets(r);
     	}
 
-    	getAllCastleLocations(r);
+    	handleCastleTalk(r);
 
         // Finish up broadcasting if necessary
     	boolean alreadyBroadcastedEnemyCastleLocation = false;
