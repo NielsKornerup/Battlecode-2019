@@ -66,7 +66,9 @@ public class Prophet {
             if (!foundCastle) {
                 r.log(".......... Enemy castle is dead. Removing from map.");
                 enemyCastleMap.removeTarget(target);
+                r.log("Enemy castle is dead, so recalculating distance map.");
                 enemyCastleMap.recalculateDistanceMap();
+                CastleTalkUtils.sendEnemyCastleKilled(r, target);
             }
         }
     }

@@ -13,15 +13,14 @@ public class Pilgrim {
     static Point target;
 
     private static PriorityQueue targets = new PriorityQueue();
-    private static Set<Point> knownTargets = new HashSet<>();
+    private static HashMap<Point, Integer> knownTargets = new HashMap<>(); // Maps from point to bullshit
     private static HashMap<Integer, Boolean> pilgrimsTalkedTo = new HashMap<>();
 
     private static State state = State.GATHERING;
 
     public enum State {
         GATHERING,
-        MOVING_RESOURCE_HOME;
-
+        MOVING_RESOURCE_HOME
     }
 
     private static void populateTargets(MyRobot r) {
@@ -42,7 +41,7 @@ public class Pilgrim {
             if (robot.unit == r.SPECS.CASTLE || robot.unit == r.SPECS.CHURCH) {
             	Point target = new Point(robot.x, robot.y);
                 targets.add(target);
-                knownTargets.add(target);
+                knownTargets.put(target, 0);
             }
         }
         castleMap = new Navigation(r, r.getPassableMap(), targets);
@@ -65,8 +64,8 @@ public class Pilgrim {
         boolean foundNewChurchOrCastle = false;
         List<Robot> nearbyCastles = Utils.getRobotsInRange(r, r.SPECS.CASTLE, true, 0, Utils.mySpecs(r).VISION_RADIUS);
         for(Robot rob: nearbyCastles) {
-            if(!knownTargets.contains(Utils.getLocation(rob))) {
-                knownTargets.add(Utils.getLocation(rob));
+            if(!knownTargets.containsKey(Utils.getLocation(rob))) {
+                knownTargets.put(Utils.getLocation(rob), 0);
                 castleMap.addTarget(Utils.getLocation(rob));
                 foundNewChurchOrCastle = true;
             }
@@ -74,14 +73,15 @@ public class Pilgrim {
 
         List<Robot> nearbyChurches = Utils.getRobotsInRange(r, r.SPECS.CHURCH, true, 0, Utils.mySpecs(r).VISION_RADIUS);
         for(Robot rob: nearbyChurches) {
-            if(!knownTargets.contains(Utils.getLocation(rob))) {
-                knownTargets.add(Utils.getLocation(rob));
+            if(!knownTargets.containsKey(Utils.getLocation(rob))) {
+                knownTargets.put(Utils.getLocation(rob), 0);
                 castleMap.addTarget(Utils.getLocation(rob));
                 foundNewChurchOrCastle = true;
             }
         }
 
         if(foundNewChurchOrCastle) {
+            r.log("Found new church or castle, so recalculating distance map.");
             castleMap.recalculateDistanceMap();
         }
     }
@@ -127,6 +127,7 @@ public class Pilgrim {
         if (castleMap.getPotential(Utils.myLocation(r)) == 0) {
             // This means we're standing on the square, which means it was destroyed. Remove it from the map
             castleMap.removeTarget(Utils.myLocation(r));
+            r.log("Invalidated church or castle, so recalculating distance map.");
             castleMap.recalculateDistanceMap();
         }
     }
