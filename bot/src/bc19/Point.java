@@ -37,7 +37,10 @@ public class Point implements Comparable<Point> {
     }
     
     public int hashCode() {
-    	return x ^ y;
+        int hash = 7;
+        hash = 71 * hash + this.x;
+        hash = 71 * hash + this.y;
+        return hash;
     }
     
     public String toString() {

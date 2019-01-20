@@ -6,6 +6,7 @@ public class CastleTalkUtils {
     private static final int ARGUMENT_SIZE_BITS = 6;
 
     private static final byte CASTLE_LOCATION_COMMUNICATION_MASK = (byte) (0b11 << ARGUMENT_SIZE_BITS);
+    private static final byte ENEMY_CASTLE_KILLED_MASK = (byte) (0b10 << ARGUMENT_SIZE_BITS);
 
     private static void sendCastleTalk(MyRobot r, byte message) {
         r.castleTalk(message);
@@ -26,6 +27,10 @@ public class CastleTalkUtils {
     public static void sendCastleCoord(MyRobot r, int coordinate) {
         byte message = (byte) (CASTLE_LOCATION_COMMUNICATION_MASK | ((byte) coordinate));
         sendCastleTalk(r, message);
+    }
+
+    public static void sendEnemyCastleKilled(MyRobot r, Point enemyCastleLocation) {
+
     }
 
 }
