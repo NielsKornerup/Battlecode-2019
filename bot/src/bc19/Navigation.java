@@ -3,21 +3,19 @@ package bc19;
 import java.util.ArrayList;
 import java.util.List;
 
-import static bc19.Constants.MAX_INT;
-
 public class Navigation {
 
     private MyRobot r;
     private boolean[][] passableMap;
     private List<Point> targets;
-    private int maxDistance;
+    private int maxMovementRadius;
     private int[][] distances;
 
     public void printDistances() {
         for (int i = 0; i < distances.length; i++) {
             String thing = "";
             for (int j = 0; j < distances[0].length; j++) {
-                if (distances[i][j] < MAX_INT) {
+                if (distances[i][j] < Constants.MAX_INT) {
                     thing += (distances[i][j] + " ");
                 } else {
                     thing += "inf ";
@@ -27,19 +25,14 @@ public class Navigation {
         }
     }
 
-    // call recalculateDistanceMap
-    public void setThreshold(int threshold) {
-        this.maxDistance = threshold;
-    }
-
-    private ArrayList<Point> getPossibleMovementDeltas() {
+    private ArrayList<Point> getPossibleMovementDeltas(int radius) {
         ArrayList<Point> deltas = new ArrayList<>();
-        for (int dx = -1 * maxDistance; dx <= maxDistance; dx++) {
-            for (int dy = -1 * maxDistance; dy <= maxDistance; dy++) {
+        for (int dx = -1 * radius; dx <= radius; dx++) {
+            for (int dy = -1 * radius; dy <= radius; dy++) {
                 if(dx == 0 && dy == 0) {
                     continue;
                 }
-                if((dx * dx + dy * dy) > (maxDistance * maxDistance)) {
+                if((dx * dx + dy * dy) > (radius * radius)) {
                     continue;
                 }
                 deltas.add(new Point(dx, dy));
@@ -49,12 +42,12 @@ public class Navigation {
     }
 
     public void recalculateDistanceMap() {
-        ArrayList<Point> movementDeltas = getPossibleMovementDeltas();
+        ArrayList<Point> movementDeltas = getPossibleMovementDeltas(maxMovementRadius);
 
         // Clear distance map
         for (int i = 0; i < distances.length; i++) {
             for (int j = 0; j < distances[0].length; j++) {
-                distances[i][j] = MAX_INT;
+                distances[i][j] = Constants.MAX_INT;
             }
         }
 
@@ -65,16 +58,13 @@ public class Navigation {
             pq.enqueue(new Node(0, new Point(target.x, target.y)));
         }
 
-        int i = 0;
         while (!pq.isEmpty()) {
-            i++;
-            int sz = pq.size();
             Node cur = pq.dequeue();
             int dist = cur.dist;
             Point loc = cur.p;
-            int x = loc.getX();
-            int y = loc.getY();
-            if (distances[y][x] < MAX_INT) {
+            int x = loc.x;
+            int y = loc.y;
+            if (distances[y][x] < Constants.MAX_INT) {
                 continue;
             }
             distances[y][x] = dist;
@@ -101,19 +91,13 @@ public class Navigation {
     }
 
 
-    public Navigation(MyRobot r, boolean[][] passableMap, List<Point> targets, int maxDistance) {
-        // TODO MAKE THIS BASED OFF OF FUEL COST
-        // TODO ACCOUNT FOR CASE WHERE THERE IS INPENETRABLE WALL SEPARATING THINGS
+    public Navigation(MyRobot r, boolean[][] passableMap, List<Point> targets, int maxMovementRadius) {
         this.r = r;
         this.passableMap = passableMap;
-        this.maxDistance = maxDistance;
+        this.maxMovementRadius = maxMovementRadius;
         this.distances = new int[passableMap.length][passableMap[0].length];
         this.targets = targets;
         recalculateDistanceMap();
-    }
-
-    public Navigation(MyRobot r, boolean[][] passableMap, List<Point> targets) {
-        this(r, passableMap, targets, 2);
     }
 
 
@@ -122,17 +106,14 @@ public class Navigation {
      * <p>
      * Tries all possible directions, returning their optimality in sorted order.
      * <p>
-     * TODO: Uses some sort of heuristic to weight moving quick against using fuel.
-     * <p>
      * Null is returned if all adjacent squares are 'too far' (over threshold)
      * or impossible to reach.
      */
 
     public Point getNextMove(int radius) {
-        // TODO: remove radius parameter
-        ArrayList<Point> possibleDeltas = getPossibleMovementDeltas(); // TODO shuffle for tiebreaking
+        ArrayList<Point> possibleDeltas = getPossibleMovementDeltas(radius); // TODO shuffle for tiebreaking
 
-        int minDist = MAX_INT;
+        int minDist = Constants.MAX_INT;
         Point bestDelta = null;
 
         Point start = Utils.myLocation(r);
@@ -145,15 +126,6 @@ public class Navigation {
             }
         }
         return bestDelta;
-    }
-
-    public int getDijkstraMapValue(Point location) {
-        int x = location.x;
-        int y = location.y;
-        if (x >= -1 && y >= -1 && y < distances.length && x < distances[y].length) {
-            return distances[y][x];
-        }
-        return Integer.MIN_VALUE; // TODO should this be max or min?
     }
 
     public void addTarget(Point pos) {
@@ -173,7 +145,11 @@ public class Navigation {
     }
     
     public int getPotential(Point target) {
-    	int res = distances[target.y][target.x];
-    	return res;
+        int x = target.x;
+        int y = target.y;
+        if (x < 0 || y < 0 || y >= distances.length || x >= distances[y].length) {
+            return 10000; // TODO should this be max or min?
+        }
+        return distances[y][x];
     }
 }
