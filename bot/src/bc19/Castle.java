@@ -116,20 +116,21 @@ public class Castle {
             }
         } else if (r.turn == 5) {
             // Print enemy castle locations
-            Point enemy = Utils.getMirroredPosition(r, new Point(r.me.x, r.me.y));
-            r.log("[castle] Counterpart enemy castle location: " + enemy.x + " " + enemy.y);
-            r.log("[castle] Other enemy castle locations: ");
+            // Point enemy = Utils.getMirroredPosition(r, new Point(r.me.x, r.me.y));
+            // r.log("[castle] Counterpart enemy castle location: " + enemy.x + " " + enemy.y);
+            // r.log("[castle] Other enemy castle locations: ");
             for (Point point : otherEnemyCastleLocations) {
                 r.log(point.x + " " + point.y);
             }
         }
     }
 
-    private static int enemyCastleLocationIndex = 0; // Used for broadcasting
+    private static int enemyCastleLocationIndex = 3; // Used for broadcasting, starts greater than number of castles
     private static void broadcastEnemyCastleLocation(MyRobot r) {
         // 4. Broadcast enemy castle locations to nearby built prophets.
         if (enemyCastleLocationIndex < otherEnemyCastleLocations.size()) {
-            Collections.sort(otherEnemyCastleLocations);
+            Point point = otherEnemyCastleLocations.get(enemyCastleLocationIndex);
+            r.log("Sending location " + point.x + " " + point.y);
             CommunicationUtils.sendEnemyCastleLocation(r, otherEnemyCastleLocations.get(enemyCastleLocationIndex));
             enemyCastleLocationIndex++;
         }
@@ -142,7 +143,12 @@ public class Castle {
 
     	getAllCastleLocations(r);
 
-    	broadcastEnemyCastleLocation(r); // Finish up broadcasting if necessary
+        // Finish up broadcasting if necessary
+    	boolean alreadyBroadcastedEnemyCastleLocation = false;
+    	if (enemyCastleLocationIndex < otherEnemyCastleLocations.size()) {
+            broadcastEnemyCastleLocation(r);
+            alreadyBroadcastedEnemyCastleLocation = true;
+        }
     	
     	//TODO: code this constant for the max range
     	List<Robot> robots = Utils.getRobotsInRange(r, r.SPECS.PILGRIM, true, 0, 5);
@@ -189,7 +195,9 @@ public class Castle {
             BuildAction action = Utils.tryAndBuildInRandomSpace(r, r.SPECS.PROPHET);
             if (action != null) {
                 enemyCastleLocationIndex = 0;
-                broadcastEnemyCastleLocation(r);
+                if (!alreadyBroadcastedEnemyCastleLocation) {
+                    broadcastEnemyCastleLocation(r);
+                }
                 return action;
             }
         }
