@@ -4,7 +4,7 @@ import java.util.ArrayList;
 import java.util.HashMap;
 
 public class Ring {
-    private static final int RING_START = 3;
+    private static final int RING_START = 4;
     public static final int MAX_RING_LEVEL = 35;
 
     private static Navigation ringMap;
