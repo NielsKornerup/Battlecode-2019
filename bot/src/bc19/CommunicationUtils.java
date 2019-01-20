@@ -17,10 +17,12 @@ public class CommunicationUtils {
 	private static final int ENEMY_CASTLE_LOCATION_SQ = 2;
 	private static final int AGGRESSIVE_SCOUT_LOCATION_SQ = 2;
 
-	private static void sendBroadcast(MyRobot r, short message, int radiusSq) {
+	private static boolean sendBroadcast(MyRobot r, short message, int radiusSq) {
 		if (Utils.canSignal(r, radiusSq)) {
 			r.signal(message, radiusSq);
+			return true;
 		}
+		return false;
 	}
 
 	/*
@@ -49,14 +51,14 @@ public class CommunicationUtils {
 		return null;
 	}
 
-	public static void sendAggressiveScoutLocation(MyRobot r, Point target) {
+	public static boolean sendAggressiveScoutLocation(MyRobot r, Point target) {
 		short message = (short) (AGGRESSIVE_SCOUT_MASK | ((short) target.x << 6) | ((short) target.y));
-		sendBroadcast(r, message, AGGRESSIVE_SCOUT_LOCATION_SQ);
+		return sendBroadcast(r, message, AGGRESSIVE_SCOUT_LOCATION_SQ);
 	}
 
-	public static void sendEnemyCastleLocation(MyRobot r, Point target) {
+	public static boolean sendEnemyCastleLocation(MyRobot r, Point target) {
 		short message = (short) (ENEMY_CASTLE_LOCATION_MASK | ((short) target.x << 6) | ((short) target.y));
-		sendBroadcast(r, message, ENEMY_CASTLE_LOCATION_SQ);
+		return sendBroadcast(r, message, ENEMY_CASTLE_LOCATION_SQ);
 	}
 
 	public static boolean receivedEnemyCastleLocation(MyRobot r, Robot other) {
@@ -71,8 +73,8 @@ public class CommunicationUtils {
 		return null;
 	}
 
-	public static void sendAttackMessage(MyRobot r) {
-		sendBroadcast(r, PROPHET_ATTACK_MASK, ATTACK_SIGNAL_RADIUS_SQ);
+	public static boolean sendAttackMessage(MyRobot r) {
+		return sendBroadcast(r, PROPHET_ATTACK_MASK, ATTACK_SIGNAL_RADIUS_SQ);
 	}
 
 	public static boolean receivedAttackMessage(MyRobot r) {
@@ -84,9 +86,9 @@ public class CommunicationUtils {
 		return false;
 	}
 
-	public static void sendBumpMessage(MyRobot r, int unitId) {
+	public static boolean sendBumpMessage(MyRobot r, int unitId) {
 		short message = (short) (PROPHET_BUMP_MASK | ((short) unitId));
-		sendBroadcast(r, message, BUMP_SIGNAL_RADIUS_SQ);
+		return sendBroadcast(r, message, BUMP_SIGNAL_RADIUS_SQ);
 	}
 
 	public static boolean receivedBumpMessage(MyRobot r) {
@@ -101,9 +103,9 @@ public class CommunicationUtils {
 		return false;
 	}
 
-	public static void sendPilgrimTargetMessage(MyRobot r, Point target, int range) {
+	public static boolean sendPilgrimTargetMessage(MyRobot r, Point target, int range) {
 		short message = (short) (PILGRIM_TARGET_MASK | ((short) target.x << 6) | ((short) target.y));
-		sendBroadcast(r, message, range);
+		return sendBroadcast(r, message, range);
 	}
 
 	/*
