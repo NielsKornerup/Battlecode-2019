@@ -272,7 +272,9 @@ public class Utils {
     /*
     Determines if the map is horizontally or vertically mirrored, and returns the mirrored position of the current robot.
      */
+    private static int symmetryType = 0; // 0 means unset, 1 means horizontal, 2 means vertical
     public static Point getMirroredPosition(MyRobot rob, Point position) {
+        // TODO only compute this horizontal / vertical symmetry once
         boolean[][] passableMap = rob.getPassableMap();
         int ht = passableMap.length;
         int wid = passableMap[0].length;
@@ -280,21 +282,30 @@ public class Utils {
         int locX = position.x;
         int locY = position.y;
 
-        // Check for vertical symmetry
-        boolean verticalSymmetry = true;
-        for (int c = 0; c < wid; c++) {
-            for (int r = 0; r < ht / 2 + 1; r++) {
-                if (passableMap[r][c] != passableMap[ht - r - 1][c]) {
-                    verticalSymmetry = false;
-                    break;
-                }
+        // Find the type of symmetry if necessary
+        if (symmetryType == 0) {
+            // Check for vertical symmetry
+            boolean verticalSymmetry = true;
+            for (int c = 0; c < wid; c++) {
+                for (int r = 0; r < ht / 2 + 1; r++) {
+                    if (passableMap[r][c] != passableMap[ht - r - 1][c]) {
+                        verticalSymmetry = false;
+                        break;
+                    }
 
+                }
             }
+            symmetryType = verticalSymmetry ? 2: 1;
         }
-        if (verticalSymmetry) {
+        if (symmetryType == 2) { // Vertical symmetry
             return new Point(locX, ht - locY - 1);
+        } else if (symmetryType == 1) {
+            // Otherwise, horizontal symmetry
+            return new Point(wid - locX - 1, locY);
+        } else {
+            rob.log("No symmetry set! This is bad.");
         }
-        return new Point(wid - locX - 1, locY);
+        return null;
     }
     
     public static int computeSquareDistance(Point p1, Point p2) {
