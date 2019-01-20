@@ -5,7 +5,9 @@ import java.util.*;
 public class Castle {
     private static final int CASTLE_ATTACK_RADIUS_SQ = 64;
     private static int initialPilgrimsBuilt = 0;
-    
+	
+    public static int CASTLE_MAX_INITIAL_PILGRIMS = 5;
+	
     private static int numFuelWorkers=0;
     private static int numKarbWorkers=0;
     private static HashMap<Integer, Point> pilgrimToTarget = new HashMap<>();
@@ -14,7 +16,10 @@ public class Castle {
     private static HashMap<Integer, Point> castleLocations = new HashMap<>(); // Maps from unit ID to location
     private static ArrayList<Point> enemyCastleLocations = new ArrayList<>();
     
-    private static int getNumPilgrimsToBuild(MyRobot r) {
+    /*
+     * must get enemy castle locations before calling this
+     */
+    private static void computeNumPilgrimsToBuild(MyRobot r) {
     	boolean[][] karbMap = r.karboniteMap;
     	boolean[][] fuelMap = r.fuelMap;
     	int count = 0;
@@ -25,7 +30,7 @@ public class Castle {
     			}
     		}
     	}
-    	return count/2;
+    	CASTLE_MAX_INITIAL_PILGRIMS = count/(2*(1+enemyCastleLocations.size()));
     }
     
     private static HashMap<Integer, Point> otherCastleLocations = new HashMap<>(); // Maps from unit ID to location
@@ -139,6 +144,7 @@ public class Castle {
             for (Point point : otherEnemyCastleLocations) {
                 r.log(point.x + " " + point.y);
             }
+            Castle.computeNumPilgrimsToBuild(r);
         }
     }
 
@@ -193,7 +199,7 @@ public class Castle {
     	}
     	
         // 1. Build our initial pilgrims if we haven't built them yet.
-        if (initialPilgrimsBuilt < Constants.CASTLE_MAX_INITIAL_PILGRIMS) {
+        if (initialPilgrimsBuilt < CASTLE_MAX_INITIAL_PILGRIMS) {
             CommunicationUtils.sendPilgrimInfoMessage(r, targets.get(0), 3);
         	BuildAction action = Utils.tryAndBuildInRandomSpace(r, r.SPECS.PILGRIM);
             if (action != null) {
