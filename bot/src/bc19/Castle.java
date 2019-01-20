@@ -17,6 +17,20 @@ public class Castle {
     private static HashMap<Integer, Point> castleLocations = new HashMap<>(); // Maps from unit ID to location
     private static ArrayList<Point> enemyCastleLocations = new ArrayList<>();
     
+    private static int getNumPilgrimsToBuild(MyRobot r) {
+    	boolean[][] karbMap = r.karboniteMap;
+    	boolean[][] fuelMap = r.fuelMap;
+    	int count = 0;
+    	for(int y = 0; y < karbMap.length; y++) {
+    		for(int x = 0; x < karbMap[y].length; x++) {
+    			if(karbMap[y][x] || fuelMap[y][x]) {
+    				count++;
+    			}
+    		}
+    	}
+    	return count/2;
+    }
+    
     private static void populateTargets(MyRobot r) {
     	ArrayList<Point> mySpot = new ArrayList<>();
     	mySpot.add(Utils.getLocation(r.me));
