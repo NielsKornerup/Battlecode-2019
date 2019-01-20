@@ -99,7 +99,7 @@ public class Pilgrim {
     public static Action act(MyRobot r) {
         if (r.turn == 1) {
         	populateTargets(r);
-        	ArrayList<Robot> adjacentCastles = Utils.getAdjacentRobots(r, r.SPECS.CASTLE, true);
+        	List<Robot> adjacentCastles = Utils.getAdjacentRobots(r, r.SPECS.CASTLE, true);
         	target = targets.dequeue().p;
         	computeMaps(r, target);
             state = State.GATHERING;
@@ -225,8 +225,8 @@ public class Pilgrim {
         		castleMap.removeTarget(Utils.getLocation(r.me));
         		castleMap.recalculateDistanceMap();
         	}
-            ArrayList<Point> adjacentPlacesToDeposit = Utils.getAdjacentUnits(r, r.SPECS.CASTLE, true);
-            adjacentPlacesToDeposit.addAll(Utils.getAdjacentUnits(r, r.SPECS.CHURCH, true));
+            List<Point> adjacentPlacesToDeposit = Utils.getAdjacentUnitDeltas(r, r.SPECS.CASTLE, true);
+            adjacentPlacesToDeposit.addAll(Utils.getAdjacentUnitDeltas(r, r.SPECS.CHURCH, true));
             if (adjacentPlacesToDeposit.size() > 0) {
                 // Check if Karbonite or Fuel left to drop off
                 // TODO don't bother dropping off if only have trivial amounts to give

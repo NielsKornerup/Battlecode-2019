@@ -33,7 +33,7 @@ public class Prophet {
         }
         ArrayList<Point> pointsInRing = ringLocations.get(ring);
         if (ring > RING_START) {
-            return Utils.findClosestPoint(r, pointsInRing);
+            return Utils.findClosestPointManhattan(r, pointsInRing);
         } else {
             return pointsInRing.get((int) (Math.random() * pointsInRing.size()));
         }
@@ -97,7 +97,7 @@ public class Prophet {
 
     private static boolean shouldMoveTowardsCastles(MyRobot r) {
         // If there are a few friendly units nearby, then move a step towards the enemy.
-        int numFriendliesNearby = Utils.getUnitsInRange(r, -1, true, 0, Integer.MAX_VALUE).size();
+        int numFriendliesNearby = Utils.getUnitDeltasInRange(r, -1, true, 0, Integer.MAX_VALUE).size();
         // TODO: adjust this movement function to balance well between clumping and trickling.
         double probabilityMoving = 1.0 / (1.0 + Math.exp(-(numFriendliesNearby - 4))); // Modified sigmoid function
         return Math.random() < probabilityMoving;

@@ -8,7 +8,7 @@ import java.lang.Math;
 
 public class Utils {
 
-    public static Point findClosestPoint(MyRobot r, ArrayList<Point> points) {
+    public static Point findClosestPointManhattan(MyRobot r, ArrayList<Point> points) {
         Point bestPoint = null;
         int bestDistance = 100000;
         for (Point point : points) {
@@ -61,7 +61,7 @@ public class Utils {
     }
 
     public static AttackAction tryAndAttack(MyRobot r, int attackRadiusSq) {
-        ArrayList<RobotSort> enemiesNearby = Utils.getRobotSortInRange(r, false, 0, attackRadiusSq);
+        List<RobotSort> enemiesNearby = Utils.getRobotSortInRange(r, false, 0, attackRadiusSq);
         if (enemiesNearby.size() > 0) {
             // Attack the enemy with highest priority
             for (RobotSort target : enemiesNearby) {
@@ -217,11 +217,8 @@ public class Utils {
         return (b.x - a.x) * (test.x - a.x) + (b.y - a.y) * (test.y - a.y) >= 1;
     }
 
-    /*
-    Returns Arraylist of [dx, dy] of Units that are directly adjacent (i.e. in the 8 squares around the unit).
-     */
-    public static ArrayList<Point> getAdjacentUnits(MyRobot r, int unitType, boolean myTeam) {
-        ArrayList<Point> nearby = new ArrayList<>();
+    public static List<Robot> getAdjacentRobots(MyRobot r, int unitType, boolean myTeam) {
+        ArrayList<Robot> nearby = new ArrayList<>();
         for (Robot robot : r.getVisibleRobots()) {
             if (unitType != -1 && robot.unit != unitType) {
                 continue;
@@ -233,18 +230,26 @@ public class Utils {
                 continue;
             }
             if (Math.abs(robot.x - r.me.x) <= 1 && Math.abs(robot.y - r.me.y) <= 1) {
-                nearby.add(new Point(robot.x - r.me.x, robot.y - r.me.y));
+                nearby.add(robot);
             }
         }
         return nearby;
     }
 
-
     /*
-    Returns ArrayList of [dx, dy] of Units that are in range.
+    Returns Arraylist of [dx, dy] of Units that are directly adjacent (i.e. in the 8 squares around the unit).
      */
-    public static ArrayList<Point> getUnitsInRange(MyRobot r, int unitType, boolean myTeam, int minRadiusSq, int maxRadiusSq) {
-        ArrayList<Point> nearby = new ArrayList<>();
+    public static List<Point> getAdjacentUnitDeltas(MyRobot r, int unitType, boolean myTeam) {
+        List<Robot> nearby = getAdjacentRobots(r, unitType, myTeam);
+        List<Point> deltas = new ArrayList<>();
+        for (Robot robot : nearby) {
+            deltas.add(new Point(robot.x - r.me.x, robot.y - r.me.y));
+        }
+        return deltas;
+    }
+
+    public static List<Robot> getRobotsInRange(MyRobot r, int unitType, boolean myTeam, int minRadiusSq, int maxRadiusSq) {
+        ArrayList<Robot> nearby = new ArrayList<>();
         for (Robot robot : r.getVisibleRobots()) {
             if (unitType != -1 && robot.unit != unitType) {
                 continue;
@@ -260,16 +265,35 @@ public class Utils {
             int distY = robot.y - r.me.y;
             int distanceSquared = distX * distX + distY * distY;
             if (distanceSquared >= minRadiusSq && distanceSquared <= maxRadiusSq) {
-                nearby.add(new Point(robot.x - r.me.x, robot.y - r.me.y));
+                nearby.add(robot);
             }
         }
         return nearby;
+
     }
 
 
-    /*
-    Returns Point pairs of [dx, dy] that are empty (i.e. both passable and devoid of units) and within the 8 squares surrounding us.
-     */
+    public static List<Point> getUnitDeltasInRange(MyRobot r, int unitType, boolean myTeam, int minRadiusSq, int maxRadiusSq) {
+        List<Robot> nearby = getRobotsInRange(r, unitType, myTeam, minRadiusSq, maxRadiusSq);
+        ArrayList<Point> deltas = new ArrayList<>();
+        for (Robot robot : nearby) {
+            deltas.add(new Point(robot.x - r.me.x, robot.y - r.me.y));
+        }
+        return deltas;
+    }
+
+    public static List<RobotSort> getRobotSortInRange(MyRobot r, boolean myTeam, int minRadiusSq, int maxRadiusSq) {
+        List<Robot> nearby = getRobotsInRange(r, -1, myTeam, minRadiusSq, maxRadiusSq);
+        List<RobotSort> toSort = new ArrayList<>();
+        for (Robot robot : nearby) {
+            int distanceSquared = computeSquareDistance(new Point(r.me.x, r.me.y), new Point(robot.x, robot.y));
+            RobotSort rob = new RobotSort(robot.id, robot.unit, robot.x, robot.y, distanceSquared, robot.health);
+            toSort.add(rob);
+        }
+        Collections.sort(toSort);
+        return toSort;
+    }
+
     public static ArrayList<Point> getAdjacentFreeSpaces(MyRobot r) {
         ArrayList<Point> freeSpaces = new ArrayList<>();
         int[] dxes = {-1, 0, 1};
@@ -284,11 +308,10 @@ public class Utils {
         }
         return freeSpaces;
     }
-    
+
     public static boolean hasResource(MyRobot r, Point loc) {
     	return r.karboniteMap[loc.y][loc.x] || r.fuelMap[loc.y][loc.x];
     }
-    
     public static int getAdjacentResourceCount(MyRobot r, Point p) {
         int[] dxes = {-1, 0, 1};
         int[] dyes = {-1, 0, 1};
@@ -305,11 +328,12 @@ public class Utils {
         }
         return count;
     }
-
     /*
     Determines if the map is horizontally or vertically mirrored, and returns the mirrored position of the current robot.
      */
+
     private static int symmetryType = 0; // 0 means unset, 1 means horizontal, 2 means vertical
+
     public static Point getMirroredPosition(MyRobot rob, Point position) {
         // TODO only compute this horizontal / vertical symmetry once
         boolean[][] passableMap = rob.getPassableMap();
@@ -344,42 +368,18 @@ public class Utils {
         }
         return null;
     }
-    
+
     public static int computeSquareDistance(Point p1, Point p2) {
-    	return (p1.x-p2.x)*(p1.x-p2.x) + (p1.y-p2.y)*(p1.y-p2.y); 
+    	return (p1.x-p2.x)*(p1.x-p2.x) + (p1.y-p2.y)*(p1.y-p2.y);
     }
-    
+
     public static int computeManhattanDistance(Point p1, Point p2) {
-    	return Math.abs(p1.x-p2.x) + Math.abs(p1.y-p2.y); 
+    	return Math.abs(p1.x-p2.x) + Math.abs(p1.y-p2.y);
     }
-    
+
     public static Point getLocation(Robot r) {
     	return new Point(r.x, r.y);
     }
-
-	public static List<Robot> getRobotsInRange(MyRobot r, int unitType, boolean myTeam, int minRadiusSq, int maxRadiusSq) {
-        ArrayList<Robot> nearby = new ArrayList<>();
-        for (Robot robot : r.getVisibleRobots()) {
-            if (unitType != -1 && robot.unit != unitType) {
-                continue;
-            }
-            if ((myTeam && (robot.team != r.me.team)) || (!myTeam && (robot.team == r.me.team))) {
-                continue;
-            }
-            if (robot.x == r.me.x && robot.y == r.me.y) {
-                continue;
-            }
-
-            int distX = robot.x - r.me.x;
-            int distY = robot.y - r.me.y;
-            int distanceSquared = distX * distX + distY * distY;
-            if (distanceSquared >= minRadiusSq && distanceSquared <= maxRadiusSq) {
-                nearby.add(robot);
-            }
-        }
-        return nearby;
-		
-	}
 
     public static HashMap<Integer, ArrayList<Point>> generateRingLocations(MyRobot r, Point castle, Point enemyCastle) {
         HashMap<Integer, ArrayList<Point>> ringLocations = new HashMap<>();
@@ -401,53 +401,13 @@ public class Utils {
         }
         return ringLocations;
     }
-
     // Must be called immediately after spawning to work
+
     public static Point getCastleLocation(MyRobot r) {
         // TODO make work with Churches too
-        Point initialCastleDelta = Utils.getAdjacentUnits(r, r.SPECS.CASTLE, true).get(0);
+        Point initialCastleDelta = Utils.getAdjacentUnitDeltas(r, r.SPECS.CASTLE, true).get(0);
         return new Point(r.me.x + initialCastleDelta.x, r.me.y + initialCastleDelta.y);
     }
-    
-    public static ArrayList<RobotSort> getRobotSortInRange(MyRobot r, boolean myTeam, int minRadiusSq, int maxRadiusSq){
-    	ArrayList<RobotSort> nearby = new ArrayList<RobotSort>();
-    	for (Robot robot : r.getVisibleRobots()) {
-            if ((myTeam && (robot.team != r.me.team)) || (!myTeam && (robot.team == r.me.team))) {
-                continue;
-            }
-            if (robot.x == r.me.x && robot.y == r.me.y) {
-                continue;
-            }
-            int distX = robot.x - r.me.x;
-            int distY = robot.y - r.me.y;
-            int distanceSquared = distX * distX + distY * distY;
-            if (distanceSquared >= minRadiusSq && distanceSquared <= maxRadiusSq) {
-            	RobotSort rob = new RobotSort(robot.id, robot.unit, robot.x, robot.y, distanceSquared, robot.health);
-                nearby.add(rob);
-            }
-        }
-    	Collections.sort(nearby);
-    	return nearby;
-    }
-
-	public static ArrayList<Robot> getAdjacentRobots(MyRobot r, int unitType, boolean myTeam) {
-        ArrayList<Robot> nearby = new ArrayList<>();
-        for (Robot robot : r.getVisibleRobots()) {
-            if (unitType != -1 && robot.unit != unitType) {
-                continue;
-            }
-            if ((myTeam && (robot.team != r.me.team)) || (!myTeam && (robot.team == r.me.team))) {
-                continue;
-            }
-            if (robot.x == r.me.x && robot.y == r.me.y) {
-                continue;
-            }
-            if (Math.abs(robot.x - r.me.x) <= 1 && Math.abs(robot.y - r.me.y) <= 1) {
-                nearby.add(robot);
-            }
-        }
-        return nearby;
-	}
 
 	public static List<Point> getFuelPoints(MyRobot r) {
         boolean[][] fuelMap = r.getFuelMap();
