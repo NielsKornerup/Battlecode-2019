@@ -4,6 +4,7 @@ import java.util.ArrayList;
 import java.util.Collections;
 import java.util.HashMap;
 import java.util.List;
+import java.lang.Math;
 
 public class Utils {
 
@@ -84,6 +85,31 @@ public class Utils {
         }
         return null;
     }
+    
+    public static BuildAction tryAndBuildInOptimalSpace(MyRobot r, int unitToBuild) {
+        ArrayList<Point> freeSpaces = Utils.getAdjacentFreeSpaces(r);
+        if (freeSpaces.size() == 0) {
+            return null;
+        }
+        Point bestPoint = freeSpaces.get(0);
+        
+        Point myLoc = new Point(r.me.x, r.me.y);
+    	Point enemyLoc = Utils.getMirroredPosition(r, myLoc);
+    	
+        int smallestDistance = 1000;
+        for (Point adj : freeSpaces){
+        	int dist = Utils.computeManhattanDistance(new Point(adj.x+myLoc.x, adj.y+myLoc.y), enemyLoc);
+        	if (dist<smallestDistance){
+        		smallestDistance = dist;
+        		bestPoint = adj;
+        	}
+        }
+        if (canBuild(r, unitToBuild)) {
+            return r.buildUnit(unitToBuild, bestPoint.x, bestPoint.y);
+        }
+        r.log("best spot: " + bestPoint.x + " " + bestPoint.y);
+        return null;
+    }
 
     public static Action moveDijkstra(MyRobot r, Navigation map, int radius) {
         Point delta = map.getNextMove(radius);
@@ -140,7 +166,19 @@ public class Utils {
 
     public static int getFuelCost(MyRobot r, int dx, int dy) {
         int rSquared = dx * dx + dy * dy;
-        return mySpecs(r).FUEL_PER_MOVE * rSquared;
+        int fuelPerMove = 1;
+        if (r.me.unit == r.SPECS.CRUSADER) {
+            fuelPerMove = Constants.CRUSADER_FUEL_PER_MOVE;
+        } else if (r.me.unit == r.SPECS.PILGRIM) {
+            fuelPerMove = Constants.PILGRIM_FUEL_PER_MOVE;
+        } else if (r.me.unit == r.SPECS.PREACHER) {
+            fuelPerMove = Constants.PREACHER_FUEL_PER_MOVE;
+        } else if (r.me.unit == r.SPECS.PROPHET) {
+            fuelPerMove = Constants.PROPHET_FUEL_PER_MOVE;
+        } else {
+            // TODO : IDK WHAT TO DO HERE??? \-_-/
+        }
+        return fuelPerMove * rSquared;
     }
 
     public static boolean enoughFuelToMove(MyRobot r, int dx, int dy) {
@@ -310,6 +348,10 @@ public class Utils {
     
     public static int computeSquareDistance(Point p1, Point p2) {
     	return (p1.x-p2.x)*(p1.x-p2.x) + (p1.y-p2.y)*(p1.y-p2.y); 
+    }
+    
+    public static int computeManhattanDistance(Point p1, Point p2) {
+    	return Math.abs(p1.x-p2.x) + Math.abs(p1.y-p2.y); 
     }
     
     public static Point getLocation(Robot r) {

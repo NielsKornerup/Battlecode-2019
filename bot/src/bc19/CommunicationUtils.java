@@ -10,10 +10,12 @@ public class CommunicationUtils {
 	static final short PROPHET_BUMP_MASK = (short) (0b101 << ARGUMENT_SIZE_BITS);
 	static final short PROPHET_ATTACK_MASK = (short) (0b100 << ARGUMENT_SIZE_BITS);
 	static final short ENEMY_CASTLE_LOCATION_MASK = (short) (0b011 << ARGUMENT_SIZE_BITS);
+	static final short AGGRESSIVE_SCOUT_MASK = (short) (0b010 << ARGUMENT_SIZE_BITS);
 
 	private static final int ATTACK_SIGNAL_RADIUS_SQ = 5;
 	private static final int BUMP_SIGNAL_RADIUS_SQ = 2;
 	private static final int ENEMY_CASTLE_LOCATION_SQ = 2;
+	private static final int AGGRESSIVE_SCOUT_LOCATION_SQ = 2;
 
 	private static void sendBroadcast(MyRobot r, short message, int radiusSq) {
 		if (Utils.canSignal(r, radiusSq)) {
@@ -33,6 +35,23 @@ public class CommunicationUtils {
 	 */
 	private static boolean argumentMatches(short argumentMask, int signal) {
 		return (short) (signal % (0b1 << ARGUMENT_SIZE_BITS)) == argumentMask;
+	}
+
+	public static boolean receivedAggressiveScoutLocation(MyRobot r, Robot other) {
+		return (r.isRadioing(other) && instructionMatches(AGGRESSIVE_SCOUT_MASK, other.signal));
+	}
+
+	public static Point getAggressiveScoutLocation(MyRobot r, Robot other) {
+		if (receivedAggressiveScoutLocation(r, other)) {
+			short message = (short) other.signal;
+			return new Point((message / (64)) % 64, message % 64);
+		}
+		return null;
+	}
+
+	public static void sendAggressiveScoutLocation(MyRobot r, Point target) {
+		short message = (short) (AGGRESSIVE_SCOUT_MASK | ((short) target.x << 6) | ((short) target.y));
+		sendBroadcast(r, message, AGGRESSIVE_SCOUT_LOCATION_SQ);
 	}
 
 	public static void sendEnemyCastleLocation(MyRobot r, Point target) {

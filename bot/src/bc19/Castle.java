@@ -1,37 +1,82 @@
 package bc19;
 
 import java.util.*;
+import java.lang.Math;
 
 public class Castle {
     private static final int CASTLE_ATTACK_RADIUS_SQ = 64;
     private static int initialPilgrimsBuilt = 0;
-	
+
     public static int CASTLE_MAX_INITIAL_PILGRIMS = 5;
 
-    private static HashMap<Integer, Point> castleLocations = new HashMap<>(); // Maps from unit ID to location
-    private static ArrayList<Point> enemyCastleLocations = new ArrayList<>();
+    private static int numAggressiveScoutUnitsBuilt = 0;
 
+    private static HashMap<Integer, Point> otherCastleLocations = new HashMap<>(); // Maps from unit ID to location
+    private static ArrayList<Point> otherEnemyCastleLocations = new ArrayList<>(); // Doesn't include the enemy castle that mirrors ours
+    
     /*
      * must get enemy castle locations before calling this
-    */
+     */
     private static void computeNumPilgrimsToBuild(MyRobot r) {
-    	boolean[][] karbMap = r.karboniteMap;
-    	boolean[][] fuelMap = r.fuelMap;
-    	int count = 0;
-    	for(int y = 0; y < karbMap.length; y++) {
-    		for(int x = 0; x < karbMap[y].length; x++) {
-    			if(karbMap[y][x] || fuelMap[y][x]) {
-    				count++;
+        boolean[][] karbMap = r.karboniteMap;
+        boolean[][] fuelMap = r.fuelMap;
+        int count = 0;
+        for(int y = 0; y < karbMap.length; y++) {
+            for(int x = 0; x < karbMap[y].length; x++) {
+                if(karbMap[y][x] || fuelMap[y][x]) {
+                    count++;
+                }
+            }
+        }
+        CASTLE_MAX_INITIAL_PILGRIMS = count/(2*(1+otherEnemyCastleLocations.size()));
+    }
+
+    private static List<Point> computeKarbPoints(MyRobot r) {
+        boolean[][] karboniteMap = r.getKarboniteMap();
+
+        List<Point> targets = new ArrayList<>();
+        for (int y = 0; y < karboniteMap.length; y++) {
+            for (int x = 0; x < karboniteMap[y].length; x++) {
+                if (karboniteMap[y][x]) {
+                    targets.add(new Point(x, y));
+                }
+            }
+        }
+
+        return targets;
+    }
+    
+    private static Point getContestedKarboniteGuardPoint(MyRobot r){
+    	List<Point> karb = computeKarbPoints(r);
+    	Point myLoc = new Point(r.me.x, r.me.y);
+    	Point enemyLoc = Utils.getMirroredPosition(r, myLoc);
+    	int smallestDiff = 100000;
+    	Point bestPoint = null;
+    	for (Point loc : karb){
+    		int dist1 = Utils.computeManhattanDistance(myLoc, loc);
+    		int dist2 = Utils.computeManhattanDistance(enemyLoc,loc);
+    		int diff = Math.abs(dist1-dist2)*100+dist1;
+    		if (diff<smallestDiff){
+    			smallestDiff = diff;
+    			bestPoint = loc;
+    		}
+    	}
+    	boolean[][] passableMap = r.getPassableMap();
+    	Point finalPoint = new Point(bestPoint.x, bestPoint.y);
+    	for (int dx = -1; dx <=1; dx++){
+    		for (int dy = -1; dy <=1; dy++){
+    			if (!(dx==0&&dy==0)){
+    				if (passableMap[bestPoint.x+dx][bestPoint.y+dy]){
+    					finalPoint.x = bestPoint.x+dx;
+    					finalPoint.y = bestPoint.y+dy;
+    				}
     			}
     		}
     	}
-    	CASTLE_MAX_INITIAL_PILGRIMS = count/(2*(1+enemyCastleLocations.size()));
+    	r.log("Contested karb location is " + finalPoint.x + " " + finalPoint.y);
+    	return finalPoint;
     }
-    
-    private static HashMap<Integer, Point> otherCastleLocations = new HashMap<>(); // Maps from unit ID to location
-    private static ArrayList<Point> otherEnemyCastleLocations = new ArrayList<>(); // Doesn't include the enemy castle that mirrors ours
 
-    
     public static void getAllCastleLocations(MyRobot r) {
         if (r.turn == 1) {
             // Send our X coordinate
@@ -91,20 +136,52 @@ public class Castle {
         }
     }
 
+    private static void handleCastleTalk(MyRobot r) {
+        getAllCastleLocations(r);
+
+        // Check for enemy castle killed messages
+        for (Robot robot : r.getVisibleRobots()) {
+            if (CastleTalkUtils.enemyCastleKilled(r, robot)) {
+                r.log("Received enemy castle killed message");
+                // Figure out which one was killed
+                // TODO this removes the other two castles, but not the one we spawned at... this is problematic
+                int idToRemove = -1;
+                for (Integer id : otherCastleLocations.keySet()) {
+                    Point location = otherCastleLocations.get(id);
+                    if (CastleTalkUtils.enemyCastleKilledLocationMatches(r, robot, location)) {
+                        idToRemove = id;
+                    }
+                }
+                r.log("Removing castle with id " + idToRemove);
+                otherCastleLocations.remove(idToRemove);
+            }
+        }
+    }
+
     public static Action act(MyRobot r) {
 
-    	getAllCastleLocations(r);
+        handleCastleTalk(r);
 
         // Finish up broadcasting if necessary
-    	boolean alreadyBroadcastedEnemyCastleLocation = false;
-    	if (enemyCastleLocationIndex < otherEnemyCastleLocations.size()) {
+        boolean alreadyBroadcastedEnemyCastleLocation = false;
+        if (enemyCastleLocationIndex < otherEnemyCastleLocations.size()) {
             broadcastEnemyCastleLocation(r);
             alreadyBroadcastedEnemyCastleLocation = true;
         }
-    	    	
-        // 1. Build our initial pilgrims if we haven't built them yet.
+    	
+    	// 1. If we haven't built any aggressive scout units yet, build them.
+        if (numAggressiveScoutUnitsBuilt < Constants.NUM_AGGRESSIVE_SCOUT_UNITS_TO_BUILD) {
+            BuildAction action = Utils.tryAndBuildInOptimalSpace(r, r.SPECS.PROPHET);
+            if (action != null) {
+                CommunicationUtils.sendAggressiveScoutLocation(r, getContestedKarboniteGuardPoint(r));
+                numAggressiveScoutUnitsBuilt++;
+                return action;
+            }
+        }
+    	
+        // 2. Build our initial pilgrims if we haven't built them yet.
         if (initialPilgrimsBuilt < CASTLE_MAX_INITIAL_PILGRIMS) {
-        	BuildAction action = Utils.tryAndBuildInRandomSpace(r, r.SPECS.PILGRIM);
+        	BuildAction action = Utils.tryAndBuildInOptimalSpace(r, r.SPECS.PILGRIM);
             if (action != null) {
                 initialPilgrimsBuilt++;
                 //TODO: is the 3 right?
@@ -115,8 +192,33 @@ public class Castle {
 
         // TODO implement logic/heuristics to prevent existing units from starving Castle of building opportunities
 
-        // 3. Build a prophet.
-        if(r.turn > 50) {
+        // 3. Spam crusaders at end of game
+        if (r.turn > Constants.CASTLE_SPAM_CRUSADERS_TURN) {
+            BuildAction action = Utils.tryAndBuildInRandomSpace(r, r.SPECS.CRUSADER);
+            if (action != null) {
+                return action;
+            }
+        }
+
+        // 4. If we haven't built any aggressive scout units yet, build them.
+        if (numAggressiveScoutUnitsBuilt < Constants.NUM_AGGRESSIVE_SCOUT_UNITS_TO_BUILD) {
+            BuildAction action = Utils.tryAndBuildInRandomSpace(r, r.SPECS.PROPHET);
+            if (action != null) {
+                CommunicationUtils.sendAggressiveScoutLocation(r, getContestedKarboniteGuardPoint(r));
+                numAggressiveScoutUnitsBuilt++;
+                return action;
+            }
+        }
+
+        // 5. Build a prophet.
+        if (r.turn <= 50) {
+            // Only build a prophet if we've detected enemies nearby and there are no prophets
+            int numEnemyPilgrims = Utils.getRobotsInRange(r, -1, false, 0, 1000).size();
+            int numFriendlyProphets = Utils.getRobotsInRange(r, r.SPECS.PROPHET, true, 0, 1000).size();
+            if (numEnemyPilgrims > 0 && numFriendlyProphets < 1) {
+                return Utils.tryAndBuildInRandomSpace(r, r.SPECS.PROPHET); // TODO spawn on side of castle closer to enemy
+            }
+        } else if(r.turn > 50) {
             BuildAction action = Utils.tryAndBuildInRandomSpace(r, r.SPECS.PROPHET);
             if (action != null) {
                 enemyCastleLocationIndex = 0;
@@ -127,7 +229,7 @@ public class Castle {
             }
         }
 
-        // 4. Finally, if we cannot build anything, attack if there are enemies in range.
+        // 6. Finally, if we cannot build anything, attack if there are enemies in range.
         AttackAction attackAction = Utils.tryAndAttack(r, CASTLE_ATTACK_RADIUS_SQ);
         if (attackAction != null) {
             return attackAction;

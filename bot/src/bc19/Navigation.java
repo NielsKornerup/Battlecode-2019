@@ -3,6 +3,8 @@ package bc19;
 import java.util.ArrayList;
 import java.util.List;
 
+import static bc19.Constants.MAX_INT;
+
 public class Navigation {
 
     private MyRobot r;
@@ -15,10 +17,10 @@ public class Navigation {
         for (int i = 0; i < distances.length; i++) {
             String thing = "";
             for (int j = 0; j < distances[0].length; j++) {
-                if (distances[i][j] < 10000) {
+                if (distances[i][j] < MAX_INT) {
                     thing += (distances[i][j] + " ");
                 } else {
-                    thing += "inf";
+                    thing += "inf ";
                 }
             }
             r.log(thing);
@@ -30,63 +32,55 @@ public class Navigation {
         this.maxDistance = threshold;
     }
 
-    private ArrayList<Point> getPossibleMovementDeltas(int maxMovementR) {
+    private ArrayList<Point> getPossibleMovementDeltas() {
         ArrayList<Point> deltas = new ArrayList<>();
-        for (int dx = -maxMovementR; dx <= maxMovementR; dx++) {
-            for (int dy = -maxMovementR; dy <= maxMovementR; dy++) {
-                if (dx == 0 && dy == 0) {
+        for (int dx = -1 * maxDistance; dx <= maxDistance; dx++) {
+            for (int dy = -1 * maxDistance; dy <= maxDistance; dy++) {
+                if(dx == 0 && dy == 0) {
                     continue;
                 }
-                if (dx * dx + dy * dy > maxMovementR * maxMovementR) {
+                if((dx * dx + dy * dy) > (maxDistance * maxDistance)) {
                     continue;
                 }
-
                 deltas.add(new Point(dx, dy));
             }
         }
         return deltas;
     }
-
-    private ArrayList<Point> getAdjacentDeltas() {
-        ArrayList<Point> deltas = new ArrayList<>();
-        int[] dxes = {-1, 0, 1};
-        int[] dyes = {-1, 0, 1};
-        for (int dx : dxes) {
-            for (int dy : dyes) {
-                deltas.add(new Point(dx, dy));
-            }
-        }
-        return deltas;
-    }
-
 
     public void recalculateDistanceMap() {
-        //ArrayList<Point> movementDeltas = getPossibleMovementDeltas();
-        ArrayList<Point> movementDeltas = getAdjacentDeltas();
+        ArrayList<Point> movementDeltas = getPossibleMovementDeltas();
 
         // Clear distance map
         for (int i = 0; i < distances.length; i++) {
             for (int j = 0; j < distances[0].length; j++) {
-                distances[i][j] = Integer.MAX_VALUE;
+                distances[i][j] = MAX_INT;
             }
         }
 
         // Add targets
+        PriorityQueue pq = new PriorityQueue();
 
-        Queue<Point> queue = new Queue<>();
         for (Point target : targets) {
-            distances[target.y][target.x] = 0;
-            queue.enqueue(new Point(target.x, target.y));
+            pq.enqueue(new Node(0, new Point(target.x, target.y)));
         }
 
-        // BFS out
-        while (!queue.isEmpty()) {
-            Point loc = queue.dequeue();
-            int curDistance = distances[loc.y][loc.x];
-
+        int i = 0;
+        while (!pq.isEmpty()) {
+            i++;
+            int sz = pq.size();
+            Node cur = pq.dequeue();
+            int dist = cur.dist;
+            Point loc = cur.p;
+            int x = loc.getX();
+            int y = loc.getY();
+            if (distances[y][x] < MAX_INT) {
+                continue;
+            }
+            distances[y][x] = dist;
             for (Point disp : movementDeltas) {
-                int newX = loc.getX() + disp.x;
-                int newY = loc.getY() + disp.y;
+                int newX = x + disp.getX();
+                int newY = y + disp.getY();
 
                 // Check on board
                 if (newX < 0 || newY < 0 || newY >= distances.length || newX >= distances[0].length) {
@@ -98,21 +92,10 @@ public class Navigation {
                     continue;
                 }
 
-                int newDistance = 1 + curDistance;
+                int newDist = dist + Utils.getFuelCost(r, disp.getX(), disp.getY());
+                Point newPoint = new Point(newX, newY);
 
-                // Check that this isn't exceeding the distance we want units to "see"
-                if (newDistance >= maxDistance) {
-                    continue;
-                }
-                //int newDistance = curDistance + Utils.getFuelCost(r, disp.x, disp.y);
-
-                // Check that this actually results in a shorter path
-                if (distances[newY][newX] <= newDistance) {
-                    continue;
-                }
-
-                distances[newY][newX] = newDistance;
-                queue.enqueue(new Point(newX, newY));
+                pq.enqueue(new Node(newDist, newPoint));
             }
         }
     }
@@ -130,7 +113,7 @@ public class Navigation {
     }
 
     public Navigation(MyRobot r, boolean[][] passableMap, List<Point> targets) {
-        this(r, passableMap, targets, Integer.MAX_VALUE);
+        this(r, passableMap, targets, 2);
     }
 
 
@@ -146,9 +129,10 @@ public class Navigation {
      */
 
     public Point getNextMove(int radius) {
-        ArrayList<Point> possibleDeltas = getPossibleMovementDeltas(radius); // TODO shuffle for tiebreaking
+        // TODO: remove radius parameter
+        ArrayList<Point> possibleDeltas = getPossibleMovementDeltas(); // TODO shuffle for tiebreaking
 
-        int minDist = Integer.MAX_VALUE;
+        int minDist = MAX_INT;
         Point bestDelta = null;
 
         Point start = new Point(r.me.x, r.me.y);
@@ -189,6 +173,7 @@ public class Navigation {
     }
     
     public int getPotential(Point target) {
-    	return distances[target.y][target.x];
+    	int res = distances[target.y][target.x];
+    	return res;
     }
 }

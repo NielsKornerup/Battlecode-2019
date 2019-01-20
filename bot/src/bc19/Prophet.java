@@ -8,7 +8,7 @@ public class Prophet {
     private static HashMap<Integer, ArrayList<Point>> ringLocations = new HashMap<>();
     private static Point ringTarget = null;
     private static final int RING_START = 3;
-    private static final int MAX_RING_LEVEL = 8;
+    private static final int MAX_RING_LEVEL = 20;
     private static int ring = RING_START;
 
     public enum State {
@@ -28,6 +28,9 @@ public class Prophet {
     private static final int TURNS_BEFORE_DONE_RECEIVING_ENEMY_CASTLE_LOCATIONS = 2;
 
     private static Point pickRingTarget(MyRobot r) {
+        if (!ringLocations.containsKey(ring)) {
+            return null;
+        }
         ArrayList<Point> pointsInRing = ringLocations.get(ring);
         if (ring > RING_START) {
             return Utils.findClosestPoint(r, pointsInRing);
@@ -45,7 +48,7 @@ public class Prophet {
         return null;
     }
 
-    private static Action ringFormation(MyRobot r) {
+    public static Action ringFormation(MyRobot r) {
         if (CommunicationUtils.receivedBumpMessage(r) && Utils.isOn(r, ringTarget)) {
             if (ring >= MAX_RING_LEVEL) {
                 return beginAttack(r);
@@ -116,6 +119,10 @@ public class Prophet {
     }
 
     private static void invalidateEnemyCastleTargetsIfNecessary(MyRobot r) {
+        if (enemyCastleMap == null) {
+            return;
+        }
+
         List<Point> targets = enemyCastleMap.getTargets();
 
         Point myLoc = new Point(r.me.x, r.me.y);
@@ -137,10 +144,44 @@ public class Prophet {
         }
     }
 
+    private static void doAggressiveScoutInitialization(MyRobot r) {
+        // Check if we are an aggressive scout
+        for (Robot robot : r.getVisibleRobots()) {
+            if (CommunicationUtils.receivedAggressiveScoutLocation(r, robot)) {
+                aggressiveScout = true;
+                r.log("I am an aggressive scout.");
+                // Set Dijkstra map to just go to that area
+                ArrayList<Point> targets = new ArrayList<>();
+                targets.add(CommunicationUtils.getAggressiveScoutLocation(r, robot));
+                // TODO we overload what the map does here which is kinda bad
+                enemyCastleMap = new Navigation(r, r.getPassableMap(), targets);
+                break;
+            }
+        }
+    }
+
+    private static Action doAggressiveScoutActions(MyRobot r) {
+        // 1. Attack enemies if nearby
+        AttackAction attackAction = Utils.tryAndAttack(r, Utils.mySpecs(r).ATTACK_RADIUS[1]);
+        if (attackAction != null) {
+            return attackAction;
+        }
+
+        // 2. Move towards aggression point
+        return Utils.moveDijkstraThenRandom(r, enemyCastleMap, 1);
+    }
+
+    static boolean aggressiveScout = false;
     public static Action act(MyRobot r) {
         if (r.turn == 1) {
             doFirstTurnActions(r);
+            doAggressiveScoutInitialization(r);
         }
+
+        if (aggressiveScout) {
+            return doAggressiveScoutActions(r);
+        }
+
         if (r.turn < TURNS_BEFORE_DONE_RECEIVING_ENEMY_CASTLE_LOCATIONS) {
             getEnemyCastleLocations(r);
         } else if (r.turn == TURNS_BEFORE_DONE_RECEIVING_ENEMY_CASTLE_LOCATIONS) {
