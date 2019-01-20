@@ -59,7 +59,6 @@ public class Prophet {
         }
 
         if (ringTarget == null) {
-            r.log("pickRingTarget");
             ringTarget = pickRingTarget(r);
 
             if (ringTarget == null) {

@@ -32,24 +32,7 @@ public class Navigation {
         this.maxDistance = threshold;
     }
 
-    private ArrayList<Point> getPossibleMovementDeltas(int maxMovementR) {
-        ArrayList<Point> deltas = new ArrayList<>();
-        for (int dx = -maxMovementR; dx <= maxMovementR; dx++) {
-            for (int dy = -maxMovementR; dy <= maxMovementR; dy++) {
-                if (dx == 0 && dy == 0) {
-                    continue;
-                }
-                if (dx * dx + dy * dy > maxMovementR * maxMovementR) {
-                    continue;
-                }
-
-                deltas.add(new Point(dx, dy));
-            }
-        }
-        return deltas;
-    }
-
-    private ArrayList<Point> getAdjacentDeltas() {
+    private ArrayList<Point> getPossibleMovementDeltas() {
         ArrayList<Point> deltas = new ArrayList<>();
         for (int dx = -1 * maxDistance; dx <= maxDistance; dx++) {
             for (int dy = -1 * maxDistance; dy <= maxDistance; dy++) {
@@ -66,8 +49,7 @@ public class Navigation {
     }
 
     public void recalculateDistanceMap() {
-        //ArrayList<Point> movementDeltas = getPossibleMovementDeltas();
-        ArrayList<Point> movementDeltas = getAdjacentDeltas();
+        ArrayList<Point> movementDeltas = getPossibleMovementDeltas();
 
         // Clear distance map
         for (int i = 0; i < distances.length; i++) {
@@ -147,7 +129,8 @@ public class Navigation {
      */
 
     public Point getNextMove(int radius) {
-        ArrayList<Point> possibleDeltas = getPossibleMovementDeltas(radius); // TODO shuffle for tiebreaking
+        // TODO: remove radius parameter
+        ArrayList<Point> possibleDeltas = getPossibleMovementDeltas(); // TODO shuffle for tiebreaking
 
         int minDist = MAX_INT;
         Point bestDelta = null;
