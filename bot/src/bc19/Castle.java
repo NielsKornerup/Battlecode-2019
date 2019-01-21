@@ -158,13 +158,15 @@ public class Castle {
 
         // 3. Spam crusaders at end of game
         if (r.turn > Constants.CASTLE_SPAM_CRUSADERS_TURN_THRESHOLD) {
-            BuildAction action = Utils.tryAndBuildInRandomSpace(r, r.SPECS.CRUSADER);
-            if (action != null) {
-                enemyCastleLocationIndex = 1;
-                if (!alreadyBroadcastedLocation) {
-                    broadcastEnemyCastleLocationIfNeeded(r);
+            if (r.turn < Constants.FUEL_CAP_TURN_THRESHOLD || r.fuel > Constants.FUEL_CAP) {
+                BuildAction action = Utils.tryAndBuildInRandomSpace(r, r.SPECS.CRUSADER);
+                if (action != null) {
+                    enemyCastleLocationIndex = 1;
+                    if (!alreadyBroadcastedLocation) {
+                        broadcastEnemyCastleLocationIfNeeded(r);
+                    }
+                    return action;
                 }
-                return action;
             }
         }
 
@@ -177,13 +179,15 @@ public class Castle {
                 return Utils.tryAndBuildInOptimalSpace(r, r.SPECS.PROPHET);
             }
         } else {
-            BuildAction action = Utils.tryAndBuildInOptimalSpace(r, r.SPECS.PROPHET);
-            if (action != null) {
-                enemyCastleLocationIndex = 1;
-                if (!alreadyBroadcastedLocation) {
-                    broadcastEnemyCastleLocationIfNeeded(r);
+            if (r.turn < Constants.FUEL_CAP_TURN_THRESHOLD || r.fuel > Constants.FUEL_CAP) {
+                BuildAction action = Utils.tryAndBuildInOptimalSpace(r, r.SPECS.PROPHET);
+                if (action != null) {
+                    enemyCastleLocationIndex = 1;
+                    if (!alreadyBroadcastedLocation) {
+                        broadcastEnemyCastleLocationIfNeeded(r);
+                    }
+                    return action;
                 }
-                return action;
             }
         }
 
