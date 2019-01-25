@@ -18,7 +18,6 @@ public class Utils {
     }
 
     public static boolean isNearbySpaceEmpty(MyRobot r, Point delta) {
-        // TODO: should reduce calls to these functions
         boolean[][] passableMap = r.getPassableMap();
         int[][] visibleRobotMap = r.getVisibleRobotMap();
         int newX = r.me.x + delta.x;
@@ -81,6 +80,28 @@ public class Utils {
         }
         return null;
     }
+
+    public static BuildAction tryAndBuildInDirectionOf(MyRobot r, Point point, int unitToBuild) {
+        ArrayList<Point> freeSpaces = Utils.getAdjacentFreeSpaces(r);
+        if (freeSpaces.size() == 0) {
+            return null;
+        }
+        double minDist = 100000;
+        Point myLoc = Utils.myLocation(r);
+        Point bestPoint = freeSpaces.get(0);
+        for (Point adj : freeSpaces) {
+            Point absolute = new Point(myLoc.x + adj.x, myLoc.y + adj.y);
+            double distance = computeEuclideanDistance(absolute, point);
+            if (distance < minDist) {
+                bestPoint = adj;
+                minDist = distance;
+            }
+        }
+        if (canBuild(r, unitToBuild)) {
+            return r.buildUnit(unitToBuild, bestPoint.x, bestPoint.y);
+        }
+        return null;
+    }
     
     public static BuildAction tryAndBuildInOptimalSpace(MyRobot r, int unitToBuild) {
         ArrayList<Point> freeSpaces = Utils.getAdjacentFreeSpaces(r);
@@ -139,9 +160,6 @@ public class Utils {
     }
 
     public static Action moveDijkstraThenRandom(MyRobot r, Navigation map, int radius) {
-        // TODO: this function will move randomly if it can't move according to the Dijkstra map. However, this isn't
-        // necessarily what we want to happen in all cases where this method is called. We should investigate where it's being
-        // called, and adjust accordingly.
         Action action = moveDijkstra(r, map, radius);
         if (action != null) {
             return action;
@@ -178,8 +196,6 @@ public class Utils {
             int index = (int) (Math.random() * candidates.size());
             Point move = candidates.get(index);
 
-            // TODO: a lot of this work overlaps with getFreeSpaces().
-            // This is a good place to start if we want to reduce method calls to getVisibleMap() and getPassableMap().
             if (canMove(r, move)) {
                 return r.move(move.x, move.y);
             }
@@ -200,8 +216,6 @@ public class Utils {
             fuelPerMove = Constants.PREACHER_FUEL_PER_MOVE;
         } else if (r.me.unit == r.SPECS.PROPHET) {
             fuelPerMove = Constants.PROPHET_FUEL_PER_MOVE;
-        } else {
-            // TODO : IDK WHAT TO DO HERE??? \-_-/
         }
         return fuelPerMove * rSquared;
     }

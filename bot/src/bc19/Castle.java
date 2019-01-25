@@ -182,8 +182,7 @@ public class Castle {
     //https://www.programcreek.com/2013/01/leetcode-spiral-matrix-java/
     
     public static void initializeLattice(MyRobot r) {
-        // TODO make lattice code start on the side facing the enemy instead of the "right"
-        ArrayList<Point> result = new ArrayList<Point>();
+        ArrayList<Point> result = new ArrayList<>();
      
         int m = 63; //row
         int n = 63; //col
@@ -295,14 +294,12 @@ public class Castle {
             CastleTalkUtils.sendFriendlyPilgrimSpawned(r);
             // TODO check to make sure we can both produce a unit and send a message to it
             CommunicationUtils.sendPilgrimTargetMessage(r, pilgrimTarget, CommunicationUtils.PILGRIM_TARGET_RADIUS_SQ);
-            // TODO build pilgrims in location closest to desired karbonite spot
-            BuildAction action = Utils.tryAndBuildInOptimalSpace(r, r.SPECS.PILGRIM);
+            BuildAction action = Utils.tryAndBuildInDirectionOf(r, pilgrimTarget, r.SPECS.PILGRIM);
             if (action != null) {
                 pilgrimLocationQueue.dequeue();
                 return action;
             } else {
                 CastleTalkUtils.invalidate(r);
-                // TODO maybe invalidate with CommunicationUtils
             }
         }
         return null;
@@ -381,7 +378,7 @@ public class Castle {
         for (Robot robot : r.getVisibleRobots()) {
             if (CastleTalkUtils.pilgrimDoneBuildingChurch(r, robot)) {
                 churchesToAllowBuilding--;
-                buildTypeTick++; // TODO make sure this isn't starving units
+                buildTypeTick++;
             }
         }
     }
@@ -394,22 +391,6 @@ public class Castle {
         decrementChurchesToAllowBuildingIfNecessary(r);
         updatePilgrimLocations(r);
         handleCastleTalk(r);
-
-
-
-        // If it's close to the end of the game, and we're down Castles, send attack message!
-        if (r.turn >= Constants.ATTACK_TURN && r.turn % 50 == 0 && otherCastleLocations.size() + 1 < enemyCastleLocations.size()) {
-            r.log("It's late game... sending attack message.");
-            // TODO this propogates like a virus, which can waste fuel. Modify it to just send one global message
-            // TODO This involves making it save enough fuel late in the game which is why it hasn't been done yet
-            // Try to maximize our range
-            for (int i = 4; i > 0; i--) {
-                boolean sentSuccessfully = CommunicationUtils.sendAttackMessage(r, i * i);
-                if (sentSuccessfully) {
-                    break;
-                }
-            }
-        }
 
         // Finish up broadcasting enemy castle location if needed. Commented in favor of telling where to go on lattice
         // boolean alreadyBroadcastedLocation = broadcastEnemyCastleLocationIfNeeded(r);

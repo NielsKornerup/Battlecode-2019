@@ -57,7 +57,7 @@ public class Ring {
 
         int[][] visibleMap = r.getVisibleRobotMap();
         if (Utils.isAdjacentOrOn(r, ringTarget) && !Utils.isOn(r, ringTarget) && visibleMap[ringTarget.y][ringTarget.x] > 0) {
-            // Emit bump request TODO ignore enemies
+            // Emit bump request
             // Send out the ID of the robot that's sitting on our square
             CommunicationUtils.sendBumpMessage(r, r.getVisibleRobotMap()[ringTarget.y][ringTarget.x]);
             return null;

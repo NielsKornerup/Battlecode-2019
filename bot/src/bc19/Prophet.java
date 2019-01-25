@@ -81,7 +81,7 @@ public class Prophet {
         for (Robot robot : r.getVisibleRobots()) {
             if (CommunicationUtils.receivedAggressiveScoutLocation(r, robot)) {
                 isAggressiveScout = true;
-                // Set Dijkstra map to just go to that area TODO we probably shouldn't overload what the map does here
+                // Set Dijkstra map to just go to that area
                 ArrayList<Point> targets = new ArrayList<>();
                 targets.add(CommunicationUtils.getAggressiveScoutLocation(r, robot));
                 enemyCastleMap = new Navigation(r, r.getPassableMap(), targets);
@@ -95,7 +95,7 @@ public class Prophet {
         for (Robot robot : r.getVisibleRobots()) {
             if (CommunicationUtils.receivedTurtleLocation(r, robot)) {
                 isTurtle = true;
-                // Set Dijkstra map to just go to that area TODO we probably shouldn't overload what the map does here
+                // Set Dijkstra map to just go to that area
                 ArrayList<Point> targets = new ArrayList<>();
                 targets.add(CommunicationUtils.getTurtleLocation(r, robot));
                 enemyCastleMap = new Navigation(r, r.getPassableMap(), targets);

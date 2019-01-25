@@ -36,7 +36,6 @@ public class Crusader {
         for (Robot robot : r.getVisibleRobots()) {
             if (CommunicationUtils.receivedTurtleLocation(r, robot)) {
                 isTurtle = true;
-                // Set Dijkstra map to just go to that area TODO we probably shouldn't overload what the map does here
                 ArrayList<Point> targets = new ArrayList<>();
                 targets.add(CommunicationUtils.getTurtleLocation(r, robot));
                 enemyCastleMap = new Navigation(r, r.getPassableMap(), targets);

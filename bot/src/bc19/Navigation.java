@@ -122,7 +122,6 @@ public class Navigation {
 
     public Navigation(MyRobot r, boolean[][] passableMap, List<Point> targets, int maxDistance) {
         // TODO MAKE THIS BASED OFF OF FUEL COST
-        // TODO ACCOUNT FOR CASE WHERE THERE IS INPENETRABLE WALL SEPARATING THINGS
         this.r = r;
         this.passableMap = passableMap;
         this.maxDistance = maxDistance;
