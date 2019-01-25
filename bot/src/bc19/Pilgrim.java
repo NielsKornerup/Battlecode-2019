@@ -79,7 +79,6 @@ public class Pilgrim {
             //TODO: Make sure we don't go out of range. That could cause a bug.
             CommunicationUtils.sendPilgrimInfoToCastle(r, target, 5);
 
-
             computeCastleMap(r);
             state = State.GATHERING;
         }

@@ -1,10 +1,6 @@
 package bc19;
 
-import java.util.ArrayList;
-import java.util.Collections;
-import java.util.HashMap;
-import java.util.List;
-import java.lang.Math;
+import java.util.*;
 
 public class Utils {
 
@@ -505,6 +501,30 @@ public class Utils {
         }
         r.log("Contested karb location is " + finalPoint.x + " " + finalPoint.y);
         return finalPoint;
+    }
+
+    public static ArrayList<Point> getClusterLocations(ArrayList<Point> candidates) {
+        HashMap<Integer, Integer> consumed = new HashMap<>();
+        ArrayList<Point> clusters = new ArrayList<>();
+
+        int index = 0;
+        while (consumed.size() < candidates.size()) {
+            while (consumed.containsKey(index)) {
+                index++;
+            }
+
+            Point centroid = candidates.get(index);
+            clusters.add(centroid);
+            consumed.put(index, 0);
+
+            for (int i = index; i < candidates.size(); i++) {
+                Point other = candidates.get(i);
+                if (computeSquareDistance(centroid, other) < 25) {
+                    consumed.put(i, 0);
+                }
+            }
+        }
+        return clusters;
     }
 
 }
