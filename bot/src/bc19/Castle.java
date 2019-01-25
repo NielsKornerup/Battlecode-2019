@@ -391,6 +391,24 @@ public class Castle {
         updatePilgrimLocations(r);
         handleCastleTalk(r);
 
+        if (rushLikeAMothaFucka()) {
+            return doRush(r);
+        }
+
+        // If it's close to the end of the game, and we're down Castles, send attack message!
+        if (r.turn >= Constants.ATTACK_TURN && r.turn % 50 == 0 && otherCastleLocations.size() + 1 < enemyCastleLocations.size()) {
+            r.log("It's late game... sending attack message.");
+            // TODO this propogates like a virus, which can waste fuel. Modify it to just send one global message
+            // TODO This involves making it save enough fuel late in the game which is why it hasn't been done yet
+            // Try to maximize our range
+            for (int i = 4; i > 0; i--) {
+                boolean sentSuccessfully = CommunicationUtils.sendAttackMessage(r, i * i);
+                if (sentSuccessfully) {
+                    break;
+                }
+            }
+        }
+
         // Finish up broadcasting enemy castle location if needed. Commented in favor of telling where to go on lattice
         // boolean alreadyBroadcastedLocation = broadcastEnemyCastleLocationIfNeeded(r);
     	
@@ -420,10 +438,6 @@ public class Castle {
             }
         }
         
-        if (rushLikeAMothaFucka()) {
-            return doRush(r);
-        }
-
         // 3. Spam crusaders at end of game
         if (r.turn > Constants.CASTLE_SPAM_CRUSADERS_TURN_THRESHOLD) {
             if (r.turn < Constants.FUEL_CAP_TURN_THRESHOLD || r.fuel > Constants.FUEL_CAP) {
