@@ -2,37 +2,20 @@ package bc19;
 
 import java.util.ArrayList;
 import java.util.HashMap;
-import java.util.HashSet;
 import java.util.List;
-import java.util.Set;
 
 public class Pilgrim {
 
-    static Navigation targetMap;
+    private static Navigation targetMap;
     private static Navigation castleMap;
-    static Point target;
 
-    private static PriorityQueue targets = new PriorityQueue();
     private static HashMap<Point, Integer> knownTargets = new HashMap<>(); // Maps from point to bullshit
-    private static HashMap<Integer, Boolean> pilgrimsTalkedTo = new HashMap<>();
 
     private static State state = State.GATHERING;
 
     public enum State {
         GATHERING,
         MOVING_RESOURCE_HOME
-    }
-
-    private static void populateTargets(MyRobot r) {
-        ArrayList<Point> mySpot = new ArrayList<>();
-        mySpot.add(Utils.myLocation(r));
-        Navigation myMap = new Navigation(r, r.getPassableMap(), mySpot);
-        for(Point p : Utils.getKarbonitePoints(r)) {
-            targets.enqueue(new Node(myMap.getPotential(p), p));
-        }
-        for(Point p : Utils.getFuelPoints(r)) {
-            targets.enqueue(new Node(myMap.getPotential(p), p));
-        }
     }
 
     public static void computeCastleMap(MyRobot r) {
@@ -45,19 +28,6 @@ public class Pilgrim {
             }
         }
         castleMap = new Navigation(r, r.getPassableMap(), targets);
-    }
-    
-    public static void computeTargetMap(MyRobot r, Point target) {
-    	List<Point> targetList = new ArrayList<>();
-    	if (target != null) {
-            targetList.add(target);
-        }
-    	targetMap = new Navigation(r, r.getPassableMap(), targetList);
-    }
-
-    public static void computeMaps(MyRobot r, Point target) {
-    	computeTargetMap(r, target);
-        computeCastleMap(r);
     }
 
     private static void recalculateChurchAndCastleMapIfNecessary(MyRobot r) {
@@ -86,43 +56,6 @@ public class Pilgrim {
         }
     }
 
-    private static void recalculateTargetMapIfNecessary(MyRobot r) {
-        List<Robot> nearbyPilgrims = Utils.getRobotsInRange(r, r.SPECS.PILGRIM, true, 0, CommunicationUtils.PILGRIM_TARGET_RADIUS_SQ);
-
-        boolean needNewTarget = false;
-        for(Robot rob: nearbyPilgrims) {
-            Point robTarget = CommunicationUtils.getPilgrimTargetInfo(r, rob);
-            if(target.equals(robTarget)) {
-                needNewTarget = true;
-            }
-            targets.delete(Utils.getLocation(rob));
-        }
-
-        //TODO: what if we run out of targets?
-        if (needNewTarget) {
-            pilgrimsTalkedTo = new HashMap<>();
-            target = targets.dequeue().p;
-            Pilgrim.computeTargetMap(r, target);
-            // Drop off Karbonite first if necessary
-            if(r.me.karbonite > Utils.mySpecs(r).KARBONITE_CAPACITY * Constants.PILGRIM_PERCENTAGE_THRESHOLD_TO_DROP_OFF_FIRST
-                    || r.me.karbonite > Utils.mySpecs(r).FUEL_CAPACITY * Constants.PILGRIM_PERCENTAGE_THRESHOLD_TO_DROP_OFF_FIRST) {
-                state = State.MOVING_RESOURCE_HOME;
-            }
-        }
-
-        boolean foundMessageTarget = false;
-        for(Robot rob: nearbyPilgrims) {
-            if(!pilgrimsTalkedTo.containsKey(rob.id)) {
-                pilgrimsTalkedTo.put(rob.id, true);
-                foundMessageTarget = true;
-            }
-        }
-
-        if(foundMessageTarget) {
-            CommunicationUtils.sendPilgrimTargetMessage(r, target);
-        }
-    }
-
     private static void invalidateCastleOrChurchIfNecessary(MyRobot r) {
         if (castleMap.getPotential(Utils.myLocation(r)) == 0) {
             // This means we're standing on the square, which means it was destroyed. Remove it from the map
@@ -133,14 +66,24 @@ public class Pilgrim {
     }
 
     public static Action act(MyRobot r) {
+        // TODO add logic to regenerate Dijkstra map if null so the pilgrim isn't just fucked for all eternity
         if (r.turn == 1) {
-        	populateTargets(r);
-        	target = targets.dequeue().p;
-        	computeMaps(r, target);
+            //TODO: what if there are multiple adj castles? (unlikely)
+            List<Robot> adjacentCastles = Utils.getAdjacentRobots(r, r.SPECS.CASTLE, true);
+            Point target = CommunicationUtils.getPilgrimTargetInfo(r, adjacentCastles.get(0));
+            ArrayList<Point> targets = new ArrayList<>();
+            targets.add(target);
+            r.log("My target is " + target.x + " " + target.y);
+            targetMap = new Navigation(r, r.getPassableMap(), targets);
+
+            //TODO: Make sure we don't go out of range. That could cause a bug.
+            CommunicationUtils.sendPilgrimInfoToCastle(r, target, 5);
+
+
+            computeCastleMap(r);
             state = State.GATHERING;
         }
 
-        recalculateTargetMapIfNecessary(r);
         recalculateChurchAndCastleMapIfNecessary(r);
 
         if (state == State.GATHERING) {
