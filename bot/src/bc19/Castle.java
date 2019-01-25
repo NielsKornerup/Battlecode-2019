@@ -206,7 +206,7 @@ public class Castle {
             // TODO keep a counter if you're unable to build so you don't stall indefinitely
             CastleTalkUtils.sendFriendlyPilgrimSpawned(r);
             // TODO check to make sure we can both produce a unit and send a message to it
-            //CommunicationUtils.sendPilgrimTargetMessage(r, pilgrimTarget.p, CommunicationUtils.PILGRIM_TARGET_RADIUS_SQ);
+            CommunicationUtils.sendPilgrimTargetMessage(r, pilgrimTarget.p, CommunicationUtils.PILGRIM_TARGET_RADIUS_SQ);
             // TODO build pilgrims in location closest to desired karbonite spot
             BuildAction action = Utils.tryAndBuildInOptimalSpace(r, r.SPECS.PILGRIM);
             if (action != null) {
