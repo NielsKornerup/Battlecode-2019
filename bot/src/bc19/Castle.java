@@ -24,6 +24,8 @@ public class Castle {
 
     private static Lattice lattice;
 
+    private static int rushPilgrimCount = 0;
+
     public static int pickUnitToBuild(MyRobot r) {
         // NOTE: THIS METHOD MUST OPERATE COMPLETELY DETERMINISTICALLY AND NOT BE BASED ON TURN #
 
@@ -99,6 +101,63 @@ public class Castle {
             churchesToAllowBuilding = computeNumChurchesToAllowBuilding(r, pilgrimLocationQueue.getAllCastlePilgrimBuildLocations());
             mostContestedPoint = pilgrimLocationQueue.getMostContestedPoint();
         }
+    }
+
+    private static boolean rushLikeAMothaFucka() {
+        return true;
+    }
+
+    private static PriorityQueue generatePilgrimLocationQueue(MyRobot r, HashMap<Integer, Point> otherCastleLocations) {
+        HashMap<Integer, Navigation> castleIdToResourceMap = new HashMap<>();
+        for (Integer id : otherCastleLocations.keySet()) {
+            ArrayList<Point> targets = new ArrayList<>();
+            targets.add(otherCastleLocations.get(id));
+            Navigation map = new Navigation(r, r.getPassableMap(), targets);
+            castleIdToResourceMap.put(id, map);
+        }
+
+        // Add enemy castle map
+        ArrayList<Point> enemyTargets = new ArrayList<>();
+        for (Point point : enemyCastleLocations) {
+            enemyTargets.add(point);
+        }
+        Navigation enemyMap = new Navigation(r, r.getPassableMap(), enemyTargets);
+
+        ArrayList<Point> myPosition = new ArrayList<>();
+        myPosition.add(Utils.myLocation(r));
+        Navigation myMap = new Navigation(r, r.getPassableMap(), myPosition);
+        castleIdToResourceMap.put(r.me.id, myMap);
+
+        List<Point> resourceLocationsToConsider = Utils.getKarbonitePoints(r);
+        resourceLocationsToConsider.addAll(Utils.getFuelPoints(r));
+
+        PriorityQueue pilgrimLocationQueue = new PriorityQueue();
+        for (Point point : resourceLocationsToConsider) {
+
+            // Find the Castle ID with smallest potential
+            int smallestId = -1;
+            int smallestValue = 1000000;
+            int multiplier = 5153;
+            for (Integer id : castleIdToResourceMap.keySet()) {
+                Navigation map = castleIdToResourceMap.get(id);
+                int value = map.getPotential(point) * multiplier + (id % multiplier);
+                if (value < smallestValue) {
+                    smallestId = id;
+                    smallestValue = value;
+                }
+            }
+
+            if (enemyMap.getPotential(point) * multiplier * 1.2 < smallestValue) {
+                continue;
+            }
+
+            if (smallestId == r.me.id) {
+                pilgrimLocationQueue.enqueue(new Node(smallestValue, point));
+            } else {
+                pilgrimLocationQueue.enqueue(new Node(smallestValue, new Point(-1, smallestId)));
+            }
+        }
+        return pilgrimLocationQueue;
     }
 
     private static void handleEnemyCastleKilledMessages(MyRobot r) {
@@ -309,6 +368,20 @@ public class Castle {
         }
     }
 
+    private static Action doRush(MyRobot r) {
+        // NEED TO SPAWN ONLY 2-4 PILGRIMS THEN ONLY SPAWN PREACHERS
+        List<Point> karbPoints = Utils.getSortedKarbonitePoints(r);
+        if(rushPilgrimCount < Math.min(karbPoints.size(), 4)) {
+            Point targetPoint = karbPoints.get(rushPilgrimCount);
+            rushPilgrimCount++;
+            CommunicationUtils.sendPilgrimTargetMessage(r, targetPoint, CommunicationUtils.PILGRIM_TARGET_RADIUS_SQ);
+            BuildAction action = Utils.tryAndBuildInOptimalSpace(r, r.SPECS.PILGRIM);
+            return action;
+        }
+        BuildAction action = Utils.tryAndBuildInRandomSpace(r, r.SPECS.PREACHER);
+        return action;
+    }
+
     public static Action act(MyRobot r) {
         removeDeadFriendlyCastles(r);
         if (pilgrimLocationQueue != null) {
@@ -347,6 +420,10 @@ public class Castle {
             }
         }
         
+        if (rushLikeAMothaFucka()) {
+            return doRush(r);
+        }
+
         // 3. Spam crusaders at end of game
         if (r.turn > Constants.CASTLE_SPAM_CRUSADERS_TURN_THRESHOLD) {
             if (r.turn < Constants.FUEL_CAP_TURN_THRESHOLD || r.fuel > Constants.FUEL_CAP) {

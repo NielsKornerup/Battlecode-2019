@@ -6,6 +6,6 @@ package bc19;
 public class Preacher {
 
 	public static Action act(MyRobot r) {
-		return null;
+	    return Utils.moveRandom(r);
 	}
 }

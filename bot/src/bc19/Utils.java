@@ -4,7 +4,7 @@ import java.util.*;
 
 public class Utils {
 
-    public static Point findClosestPointManhattan(MyRobot r, ArrayList<Point> points) {
+    public static Point findClosestPointManhattan(MyRobot r, List<Point> points) {
         Point bestPoint = null;
         int bestDistance = 100000;
         for (Point point : points) {
@@ -489,6 +489,35 @@ public class Utils {
         }
 
         return targets;
+    }
+
+    static class AugmentedPoint implements Comparable<AugmentedPoint> {
+        Point p;
+        int dist;
+
+        AugmentedPoint(Point p, int dist) {
+            this.p = p;
+            this.dist = dist;
+        }
+
+        public int compareTo(AugmentedPoint o) {
+            return dist - o.dist;
+        }
+    }
+
+    public static List<Point> getSortedKarbonitePoints(MyRobot r) {
+        List<Point> karbPoints = getKarbonitePoints(r);
+        List<AugmentedPoint> augmentedPoints = new ArrayList<>();
+        for(Point kp : karbPoints) {
+            int dist = computeManhattanDistance(kp, new Point(r.me.x, r.me.y));
+            augmentedPoints.add(new AugmentedPoint(kp, dist));
+        }
+        Collections.sort(augmentedPoints);
+        List<Point> sortedPoints = new ArrayList<>();
+        for(AugmentedPoint ap : augmentedPoints) {
+            sortedPoints.add(ap.p);
+        }
+        return sortedPoints;
     }
 
     public static Point getContestedKarboniteGuardPoint(MyRobot r){

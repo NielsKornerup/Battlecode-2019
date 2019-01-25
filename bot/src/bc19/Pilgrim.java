@@ -84,7 +84,7 @@ public class Pilgrim {
     private static final int NUM_TURNS_BEFORE_BUMPING = 3;
     public static Action act(MyRobot r) {
         // TODO add logic to regenerate Dijkstra map if null so the pilgrim isn't just fucked for all eternity
-        if (r.turn == 1) {
+        if (r.turn == 1 || targetMap == null) {
             //TODO: what if there are multiple adj castles? (unlikely)
             List<Robot> adjacentCastles = Utils.getAdjacentRobots(r, r.SPECS.CASTLE, true);
             Point target = CommunicationUtils.getPilgrimTargetInfo(r, adjacentCastles.get(0));
