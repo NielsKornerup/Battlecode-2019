@@ -58,6 +58,14 @@ public class Castle {
             }
         } else if (r.turn == 5) {
             pilgrimLocationQueue = generatePilgrimLocationQueue(r, otherCastleLocations);
+
+            /*r.log("I'm doing: ");
+            while (!pilgrimLocationQueue.isEmpty()) {
+                Node value = pilgrimLocationQueue.dequeue();
+                if (value.p.x != -1) {
+                    r.log(value.p.x + " " + value.p.y);
+                }
+            }*/
         }
     }
 
@@ -70,6 +78,13 @@ public class Castle {
             castleIdToResourceMap.put(id, map);
         }
 
+        // Add enemy castle map
+        ArrayList<Point> enemyTargets = new ArrayList<>();
+        for (Point point : enemyCastleLocations) {
+            enemyTargets.add(point);
+        }
+        Navigation enemyMap = new Navigation(r, r.getPassableMap(), enemyTargets);
+
         ArrayList<Point> myPosition = new ArrayList<>();
         myPosition.add(Utils.myLocation(r));
         Navigation myMap = new Navigation(r, r.getPassableMap(), myPosition);
@@ -80,19 +95,23 @@ public class Castle {
 
         PriorityQueue pilgrimLocationQueue = new PriorityQueue();
         for (Point point : resourceLocationsToConsider) {
+
             // Find the Castle ID with smallest potential
             int smallestId = -1;
             int smallestValue = 1000000;
+            int multiplier = 5153;
             for (Integer id : castleIdToResourceMap.keySet()) {
                 Navigation map = castleIdToResourceMap.get(id);
-                int value = map.getPotential(point) * 5432 + (id % 5432);
+                int value = map.getPotential(point) * multiplier + (id % multiplier);
                 if (value < smallestValue) {
                     smallestId = id;
                     smallestValue = value;
                 }
             }
 
-            // TODO only enqueue locations that are closer to us than the enemy
+            if (enemyMap.getPotential(point) * multiplier * 1.2 < smallestValue) {
+                continue;
+            }
 
             if (smallestId == r.me.id) {
                 pilgrimLocationQueue.enqueue(new Node(smallestValue, point));

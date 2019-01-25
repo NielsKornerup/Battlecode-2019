@@ -66,6 +66,7 @@ public class Pilgrim {
     }
 
     public static Action act(MyRobot r) {
+        // TODO add logic to regenerate Dijkstra map if null so the pilgrim isn't just fucked for all eternity
         if (r.turn == 1) {
             //TODO: what if there are multiple adj castles? (unlikely)
             List<Robot> adjacentCastles = Utils.getAdjacentRobots(r, r.SPECS.CASTLE, true);
