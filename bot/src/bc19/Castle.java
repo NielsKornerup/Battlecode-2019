@@ -1,5 +1,4 @@
 package bc19;
-
 import java.util.*;
 
 public class Castle {
@@ -14,9 +13,6 @@ public class Castle {
     private static HashMap<Integer, Point> otherCastleLocations = new HashMap<>(); // Maps from unit ID to location
     private static ArrayList<Point> enemyCastleLocations = new ArrayList<>(); // Doesn't include the enemy castle that mirrors ours
     private static ArrayList<Point> latticeLocations = new ArrayList<>();
-    private static ArrayList<Point> allCastlePilgrimBuildLocations = new ArrayList<>();
-
-    private static PriorityQueue pilgrimLocationQueue = null;
 
     private static int tick = 0; // Used to prevent one castle from building more than other castles
     private static int tickMax = 1; // Threshold for building again
@@ -25,7 +21,8 @@ public class Castle {
     private static final int UNIT_TYPE_MODULUS = 10;
 
     private static int churchesToAllowBuilding = 0;
-
+    private static KarbFuelTargetQueue pilgrimLocationQueue;
+    
     public static int pickUnitToBuild(MyRobot r) {
         // NOTE: THIS METHOD MUST OPERATE COMPLETELY DETERMINISTICALLY
 
@@ -96,8 +93,8 @@ public class Castle {
                 enemyCastleLocations.add(Utils.getMirroredPosition(r, otherCastleLocations.get(id)));
             }
         } else if (r.turn == 5) {
-            pilgrimLocationQueue = generatePilgrimLocationQueue(r, otherCastleLocations);
-            churchesToAllowBuilding = computeNumChurchesToAllowBuilding(r, allCastlePilgrimBuildLocations);
+            pilgrimLocationQueue = new KarbFuelTargetQueue(r, otherCastleLocations, Castle.enemyCastleLocations);
+            churchesToAllowBuilding = computeNumChurchesToAllowBuilding(r, pilgrimLocationQueue.getAllCastlePilgrimBuildLocations());
             /*r.log("I'm doing: ");
             while (!pilgrimLocationQueue.isEmpty()) {
                 Node value = pilgrimLocationQueue.dequeue();
@@ -108,59 +105,6 @@ public class Castle {
         }
     }
 
-    private static PriorityQueue generatePilgrimLocationQueue(MyRobot r, HashMap<Integer, Point> otherCastleLocations) {
-        HashMap<Integer, Navigation> castleIdToResourceMap = new HashMap<>();
-        for (Integer id : otherCastleLocations.keySet()) {
-            ArrayList<Point> targets = new ArrayList<>();
-            targets.add(otherCastleLocations.get(id));
-            Navigation map = new Navigation(r, r.getPassableMap(), targets);
-            castleIdToResourceMap.put(id, map);
-        }
-
-        // Add enemy castle map
-        ArrayList<Point> enemyTargets = new ArrayList<>();
-        for (Point point : enemyCastleLocations) {
-            enemyTargets.add(point);
-        }
-        Navigation enemyMap = new Navigation(r, r.getPassableMap(), enemyTargets);
-
-        ArrayList<Point> myPosition = new ArrayList<>();
-        myPosition.add(Utils.myLocation(r));
-        Navigation myMap = new Navigation(r, r.getPassableMap(), myPosition);
-        castleIdToResourceMap.put(r.me.id, myMap);
-
-        List<Point> resourceLocationsToConsider = Utils.getKarbonitePoints(r);
-        resourceLocationsToConsider.addAll(Utils.getFuelPoints(r));
-
-        PriorityQueue pilgrimLocationQueue = new PriorityQueue();
-        for (Point point : resourceLocationsToConsider) {
-
-            // Find the Castle ID with smallest potential
-            int smallestId = -1;
-            int smallestValue = 1000000;
-            int multiplier = 5153;
-            for (Integer id : castleIdToResourceMap.keySet()) {
-                Navigation map = castleIdToResourceMap.get(id);
-                int value = map.getPotential(point) * multiplier + (id % multiplier);
-                if (value < smallestValue) {
-                    smallestId = id;
-                    smallestValue = value;
-                }
-            }
-
-            if (enemyMap.getPotential(point) * multiplier * 1.2 < smallestValue) {
-                continue;
-            }
-
-            allCastlePilgrimBuildLocations.add(point);
-            if (smallestId == r.me.id) {
-                pilgrimLocationQueue.enqueue(new Node(smallestValue, point));
-            } else {
-                pilgrimLocationQueue.enqueue(new Node(smallestValue, new Point(-1, smallestId)));
-            }
-        }
-        return pilgrimLocationQueue;
-    }
 
     private static void handleEnemyCastleKilledMessages(MyRobot r) {
         // Check for enemy castle killed messages
@@ -196,9 +140,9 @@ public class Castle {
                 continue;
             }
             if (CastleTalkUtils.friendlyPilgrimSpawned(r, robot)) {
-                Node removed = pilgrimLocationQueue.dequeue();
+                Point removed = pilgrimLocationQueue.dequeue();
                 // Sanity check
-                if (removed.p.x != -1) {
+                if (removed.x != -1) {
                     r.log("Popped one of our own locations! This should not happen.");
                 }
             }
@@ -304,14 +248,14 @@ public class Castle {
     }
 
     private static void cleanupPilgrimQueue(MyRobot r) {
-        Node toBuild = pilgrimLocationQueue.peek();
+        Point toBuild = pilgrimLocationQueue.peek();
         if (toBuild == null) {
             return;
         }
 
-        if (toBuild.p.x == -1) {
+        if (toBuild.x == -1) {
             // Not our responsibility, but check if castle is dead and remove
-            if (!otherCastleLocations.containsKey(toBuild.p.y)) {
+            if (!otherCastleLocations.containsKey(toBuild.y)) {
                 pilgrimLocationQueue.dequeue();
                 cleanupPilgrimQueue(r);
                 return;
@@ -323,18 +267,18 @@ public class Castle {
 
     private static BuildAction buildPilgrimIfNeeded(MyRobot r) {
         // Check if its our turn
-        Node pilgrimTarget = pilgrimLocationQueue.peek();
+        Point pilgrimTarget = pilgrimLocationQueue.peek();
         if (pilgrimTarget == null) {
             return null;
         }
         // Invariant: pilgrimTarget will never be the Node for a dead castle
 
-        if (pilgrimTarget.p.x != -1) {
+        if (pilgrimTarget.x != -1) {
             // Our turn to build
             // TODO keep a counter if you're unable to build so you don't stall indefinitely
             CastleTalkUtils.sendFriendlyPilgrimSpawned(r);
             // TODO check to make sure we can both produce a unit and send a message to it
-            CommunicationUtils.sendPilgrimTargetMessage(r, pilgrimTarget.p, CommunicationUtils.PILGRIM_TARGET_RADIUS_SQ);
+            CommunicationUtils.sendPilgrimTargetMessage(r, pilgrimTarget, CommunicationUtils.PILGRIM_TARGET_RADIUS_SQ);
             // TODO build pilgrims in location closest to desired karbonite spot
             BuildAction action = Utils.tryAndBuildInOptimalSpace(r, r.SPECS.PILGRIM);
             if (action != null) {
