@@ -150,9 +150,15 @@ public class Utils {
         if (action != null) {
             return action;
         }
+        
+        boolean[][] karb = r.getKarboniteMap();
+        if (karb[r.me.y][r.me.x]){
+        	return Utils.moveRandom(r);
+        }
 
         if (r.fuel > 5 * mySpecs(r).FUEL_PER_MOVE) { // TODO: adjust this heuristic
-            return Utils.moveRandom(r);
+        	return null;
+            //return Utils.moveRandom(r);
         }
 
         return null;

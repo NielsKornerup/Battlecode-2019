@@ -34,9 +34,11 @@ public class Navigation {
         ArrayList<Point> deltas = new ArrayList<>();
         for (int dx = -maxMovementR; dx <= maxMovementR; dx++) {
             for (int dy = -maxMovementR; dy <= maxMovementR; dy++) {
+            	/*
                 if (dx == 0 && dy == 0) {
                     continue;
                 }
+                */
                 if (dx * dx + dy * dy > maxMovementR * maxMovementR) {
                     continue;
                 }
@@ -155,10 +157,13 @@ public class Navigation {
         for (Point delta : possibleDeltas) {
             int newX = start.x + delta.x;
             int newY = start.y + delta.y;
-            if (Utils.canMove(r, delta) && distances[newY][newX] < minDist) { // TODO optimize this
+            if ((Utils.canMove(r, delta) || (delta.x == 0 && delta.y == 0 )) && distances[newY][newX] < minDist) { // TODO optimize this
                 bestDelta = delta;
                 minDist = distances[newY][newX];
             }
+        }
+        if (bestDelta.x == 0 && bestDelta.y == 0){
+        	return null;
         }
         return bestDelta;
     }

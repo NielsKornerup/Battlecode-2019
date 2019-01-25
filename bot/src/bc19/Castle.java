@@ -2,21 +2,24 @@ package bc19;
 
 import java.util.ArrayList;
 import java.util.HashMap;
+import java.lang.Math;
 
 public class Castle {
     private static int initialPilgrimsBuilt = 0;
     private static int initialAggressiveScoutUnitsBuilt = 0;
+    private static int turtleUnitsBuilt = 6;
 
     public static int maxInitialPilgrimsToBuild = 2;
     private static int enemyCastleLocationIndex = Constants.MAX_NUM_CASTLES; // Starts greater than # castles index
 
     private static HashMap<Integer, Point> otherCastleLocations = new HashMap<>(); // Maps from unit ID to location
     private static ArrayList<Point> enemyCastleLocations = new ArrayList<>(); // Doesn't include the enemy castle that mirrors ours
-
+    private static ArrayList<Point> latticeLocations = new ArrayList<Point>();
     public static void handleCastleLocationMessages(MyRobot r) {
         if (r.turn == 1) {
             // Send our X coordinate
             CastleTalkUtils.sendCastleCoord(r, r.me.x);
+            initializeLattice(r);
         } else if (r.turn == 2) {
             // Add X coordinates received from other castles
             for (Robot robot : r.getVisibleRobots()) {
@@ -114,6 +117,77 @@ public class Castle {
             otherCastleLocations.remove(deadCastle);
         }
     }
+    //https://www.programcreek.com/2013/01/leetcode-spiral-matrix-java/
+    
+    public static void initializeLattice(MyRobot r) {
+        ArrayList<Point> result = new ArrayList<Point>();
+     
+        int m = 63; //row
+        int n = 63; //col
+     
+        int left=0;
+        int right=n-1;
+        int top = 0;
+        int bottom = m-1;
+     
+        while(result.size()<m*n){
+            for(int j=left; j<=right; j++){
+            	result.add(0,new Point(top,j));
+            }
+            top++;
+     
+            for(int i=top; i<=bottom; i++){
+                result.add(0,new Point(i, right));
+            }
+            right--;
+     
+            //prevent duplicate row
+            if(bottom<top)
+                break;
+     
+            for(int j=right; j>=left; j--){
+                result.add(0,new Point(bottom, j));
+            }
+            bottom--;
+     
+            // prevent duplicate column
+            if(right<left)
+                break;
+     
+            for(int i=bottom; i>=top; i--){
+                result.add(0,new Point(i, left));
+            }
+            left++;
+        }
+        
+        Point myLoc = new Point(r.me.x, r.me.y);
+        boolean[][] passableMap = r.getPassableMap();
+        boolean[][] karbMap = r.getKarboniteMap();
+        boolean[][] fuelMap = r.getFuelMap();
+     
+        for (Point offset : result){
+        	int dx = offset.x-((n-1)/2);
+        	int dy = offset.y-((m-1)/2);
+        	//checkerboard pattern
+        	if ((dx+dy+200)%2!=(myLoc.x+myLoc.y)%2){
+        		continue;
+        	}
+        	/*
+        	if (Math.abs(dx) < 2 || Math.abs(dy) < 2){
+        		continue;
+        	}
+        	*/
+        	Point mapLoc = new Point(myLoc.x+dx, myLoc.y+dy);
+        	r.log("dx: "+dx+" dy: "+dy);
+        	
+        	if (mapLoc.x>=0 && mapLoc.x < passableMap[0].length && mapLoc.y>=0 && mapLoc.y < passableMap.length 
+        			&& passableMap[mapLoc.y][mapLoc.x] && !karbMap[mapLoc.y][mapLoc.x] && !fuelMap[mapLoc.y][mapLoc.x]){
+        		latticeLocations.add(mapLoc);
+        		//r.log("X: "+mapLoc.x+" Y: "+mapLoc.y);
+        	}
+        }
+        
+    }
 
     public static Action act(MyRobot r) {
 
@@ -176,16 +250,29 @@ public class Castle {
             int numEnemyUnits = Utils.getRobotsInRange(r, -1, false, 0, 1000).size();
             int numFriendlyProphets = Utils.getRobotsInRange(r, r.SPECS.PROPHET, true, 0, 1000).size();
             if (numFriendlyProphets < numEnemyUnits) {
-                return Utils.tryAndBuildInOptimalSpace(r, r.SPECS.PROPHET);
+                BuildAction action = Utils.tryAndBuildInOptimalSpace(r, r.SPECS.PROPHET);
+            
+                if (action != null) {
+	                CommunicationUtils.sendTurtleLocation(r, latticeLocations.get(turtleUnitsBuilt));
+	                turtleUnitsBuilt++;
+	                return action;
+	            }
             }
         } else {
             if (r.turn < Constants.FUEL_CAP_TURN_THRESHOLD || r.fuel > Constants.FUEL_CAP) {
                 BuildAction action = Utils.tryAndBuildInOptimalSpace(r, r.SPECS.PROPHET);
+                /* Commented out for now in favor of telling it where to go on the lattice
                 if (action != null) {
                     enemyCastleLocationIndex = 1;
                     if (!alreadyBroadcastedLocation) {
                         broadcastEnemyCastleLocationIfNeeded(r);
                     }
+                    return action;
+                }
+                */
+                if (action != null) {
+                    CommunicationUtils.sendTurtleLocation(r, latticeLocations.get(turtleUnitsBuilt));
+                    turtleUnitsBuilt++;
                     return action;
                 }
             }
