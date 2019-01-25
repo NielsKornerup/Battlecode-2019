@@ -523,7 +523,7 @@ public class Utils {
 
             for (int i = index; i < candidates.size(); i++) {
                 Point other = candidates.get(i);
-                if (computeSquareDistance(centroid, other) < 25) {
+                if (computeEuclideanDistance(centroid, other) < Constants.MIN_CHURCH_BUILD_DISTANCE) {
                     consumed.put(i, 0);
                 }
             }

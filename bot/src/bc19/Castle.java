@@ -14,7 +14,7 @@ public class Castle {
     private static HashMap<Integer, Point> otherCastleLocations = new HashMap<>(); // Maps from unit ID to location
     private static ArrayList<Point> enemyCastleLocations = new ArrayList<>(); // Doesn't include the enemy castle that mirrors ours
     private static ArrayList<Point> latticeLocations = new ArrayList<>();
-    private static ArrayList<Point> allPilgrimBuildLocations = new ArrayList<>();
+    private static ArrayList<Point> allCastlePilgrimBuildLocations = new ArrayList<>();
 
     private static PriorityQueue pilgrimLocationQueue = null;
 
@@ -27,12 +27,14 @@ public class Castle {
     private static int churchesToAllowBuilding = 0;
 
     public static int pickUnitToBuild(MyRobot r) {
+        // NOTE: THIS METHOD MUST OPERATE COMPLETELY DETERMINISTICALLY
+
         int value = buildTypeTick % UNIT_TYPE_MODULUS;
 
         if (value == 9 && churchesToAllowBuilding > 0) {
             // TODO this is dangerous
             // TODO this doesn't actually coordinate between all castles
-            return -1;
+            return r.SPECS.CHURCH;
         }
 
         if (pilgrimLocationQueue != null && pilgrimLocationQueue.isEmpty()) {
@@ -95,7 +97,7 @@ public class Castle {
             }
         } else if (r.turn == 5) {
             pilgrimLocationQueue = generatePilgrimLocationQueue(r, otherCastleLocations);
-            churchesToAllowBuilding = determineNumChurchesToBuild(r, allPilgrimBuildLocations);
+            churchesToAllowBuilding = computeNumChurchesToAllowBuilding(r, allCastlePilgrimBuildLocations);
             /*r.log("I'm doing: ");
             while (!pilgrimLocationQueue.isEmpty()) {
                 Node value = pilgrimLocationQueue.dequeue();
@@ -150,9 +152,9 @@ public class Castle {
                 continue;
             }
 
+            allCastlePilgrimBuildLocations.add(point);
             if (smallestId == r.me.id) {
                 pilgrimLocationQueue.enqueue(new Node(smallestValue, point));
-                allPilgrimBuildLocations.add(point);
             } else {
                 pilgrimLocationQueue.enqueue(new Node(smallestValue, new Point(-1, smallestId)));
             }
@@ -232,6 +234,7 @@ public class Castle {
     //https://www.programcreek.com/2013/01/leetcode-spiral-matrix-java/
     
     public static void initializeLattice(MyRobot r) {
+        // TODO make lattice code start on the side facing the enemy instead of the "right"
         ArrayList<Point> result = new ArrayList<Point>();
      
         int m = 63; //row
@@ -370,7 +373,7 @@ public class Castle {
         }
     }
 
-    private static int determineNumChurchesToBuild(MyRobot r, ArrayList<Point> candidates) {
+    private static int computeNumChurchesToAllowBuilding(MyRobot r, ArrayList<Point> candidates) {
         List<Point> centroids = Utils.getClusterLocations(candidates);
         r.log("Centroids are: ");
         for (Point point : centroids) {
@@ -380,13 +383,47 @@ public class Castle {
         List<Point> toBuild = new ArrayList<>();
         // Eliminate centroids that are within our radius
         for (Point point : centroids) {
-            if (Utils.computeEuclideanDistance(Utils.myLocation(r), point) > Constants.MIN_CHURCH_BUILD_DISTANCE) {
+            boolean shouldBuild = Utils.computeEuclideanDistance(Utils.myLocation(r), point) > Constants.MIN_CHURCH_BUILD_DISTANCE;
+            for (Point otherCastleLoc : otherCastleLocations.values()) {
+                if (Utils.computeEuclideanDistance(otherCastleLoc, point) < Constants.MIN_CHURCH_BUILD_DISTANCE) {
+                    shouldBuild = false;
+                    break;
+                }
+            }
+            if (shouldBuild) {
                 toBuild.add(point);
             }
         }
 
         r.log("We are going to build " + toBuild.size() + " churches.");
-        return toBuild.size() - 1; // TODO remove the -1 here?
+        return toBuild.size();
+    }
+
+    private static boolean pilgrimHadChanceToBuildChurch = false;
+    private static void decrementChurchesToAllowBuildingIfNecessary(MyRobot r) {
+        // Check if currently trying to build churches
+        if (pickUnitToBuild(r) != r.SPECS.CHURCH) {
+            return;
+        }
+
+        if (!pilgrimHadChanceToBuildChurch
+                && r.fuel >= Utils.getSpecs(r, r.SPECS.CHURCH).CONSTRUCTION_FUEL
+                && r.karbonite >= Utils.getSpecs(r, r.SPECS.CHURCH).CONSTRUCTION_KARBONITE) {
+            pilgrimHadChanceToBuildChurch = true;
+        } else if (pilgrimHadChanceToBuildChurch && Utils.canBuild(r, r.SPECS.CHURCH)) {
+            churchesToAllowBuilding--;
+            buildTypeTick++;
+            pilgrimHadChanceToBuildChurch = false;
+        } else {
+            pilgrimHadChanceToBuildChurch = false;
+        }
+
+        for (Robot robot : r.getVisibleRobots()) {
+            if (CastleTalkUtils.pilgrimDoneBuildingChurch(r, robot)) {
+                churchesToAllowBuilding--;
+                buildTypeTick++; // TODO make sure this isn't starving units
+            }
+        }
     }
 
     public static Action act(MyRobot r) {
@@ -394,15 +431,11 @@ public class Castle {
         if (r.turn > 5) { // TODO hardcoded constant
             cleanupPilgrimQueue(r);
         }
+        decrementChurchesToAllowBuildingIfNecessary(r);
         updatePilgrimLocations(r);
         handleCastleTalk(r);
 
-        for (Robot robot : r.getVisibleRobots()) {
-            if (pilgrimToTarget.keySet().contains(robot.id) && CastleTalkUtils.pilgrimDoneBuildingChurch(r, robot)) {
-                churchesToAllowBuilding--;
-                buildTypeTick++; // TODO make sure this isn't starving units
-            }
-        }
+
 
         // If it's close to the end of the game, and we're down Castles, send attack message!
         if (r.turn >= Constants.ATTACK_TURN && r.turn % 50 == 0 && otherCastleLocations.size() + 1 < enemyCastleLocations.size()) {
@@ -421,15 +454,16 @@ public class Castle {
         // Finish up broadcasting enemy castle location if needed. Commented in favor of telling where to go on lattice
         // boolean alreadyBroadcastedLocation = broadcastEnemyCastleLocationIfNeeded(r);
     	
-    	/*// 1. If we haven't built any aggressive scout units yet, build them.
+    	// 1. If we haven't built any aggressive scout units yet, build them.
         if (initialAggressiveScoutUnitsBuilt < Constants.NUM_AGGRESSIVE_SCOUT_UNITS_TO_BUILD) {
             BuildAction action = Utils.tryAndBuildInOptimalSpace(r, r.SPECS.PROPHET);
             if (action != null) {
+                // TODO Modify initial aggressive scout location to match the centroids we picked for our prophet
                 CommunicationUtils.sendAggressiveScoutLocation(r, Utils.getContestedKarboniteGuardPoint(r));
                 initialAggressiveScoutUnitsBuilt++;
                 return action;
             }
-        }*/
+        }
 
         // TODO figure out when to intersperse building combat units
         if (r.turn > 5 && pickUnitToBuild(r) == r.SPECS.PILGRIM) { // TODO hardcoded constant

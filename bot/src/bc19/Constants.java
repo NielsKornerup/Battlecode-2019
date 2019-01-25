@@ -39,6 +39,7 @@ public class Constants {
         public static final int FUEL_CAP_TURN_THRESHOLD = 700;
         public static final int FUEL_CAP = 400;
 
+	// TODO the way this constant is used, things could go bad if we change how potentials work in Dijkstra map
 	public static final int MIN_CHURCH_BUILD_DISTANCE = 4;
 
 	public static final double PILGRIM_PERCENTAGE_THRESHOLD_TO_DROP_OFF_FIRST = .3;

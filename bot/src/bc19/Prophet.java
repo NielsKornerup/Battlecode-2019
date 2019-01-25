@@ -68,6 +68,7 @@ public class Prophet {
             }
             if (!foundCastle) {
                 enemyCastleMap.removeTarget(target);
+                // TODO this function is buggy - it sometimes thinks enemy castle is dead when it actually isn't
                 r.log("Enemy castle is dead, so recalculating distance map.");
                 enemyCastleMap.recalculateDistanceMap();
                 CastleTalkUtils.sendEnemyCastleKilled(r, target);

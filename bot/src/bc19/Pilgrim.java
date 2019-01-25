@@ -65,6 +65,20 @@ public class Pilgrim {
         }
     }
 
+    private static boolean shouldExecuteLocalLeader(MyRobot r) {
+        return castleMap.getPotential(Utils.myLocation(r)) > Constants.MIN_CHURCH_BUILD_DISTANCE;
+    }
+
+    private static boolean localLeader(MyRobot r) {
+        // The local leader should stay behind in order to spawn a church
+        for (Robot rob: Utils.getRobotsInRange(r, r.SPECS.PILGRIM, true, 0, Constants.MIN_CHURCH_BUILD_DISTANCE * Constants.MIN_CHURCH_BUILD_DISTANCE)) {
+            if (rob.id > r.id) {
+                return false;
+            }
+        }
+        return true;
+    }
+
     public static Action act(MyRobot r) {
         // TODO add logic to regenerate Dijkstra map if null so the pilgrim isn't just fucked for all eternity
         if (r.turn == 1) {
@@ -96,16 +110,17 @@ public class Pilgrim {
                     }
             	}
                 // Check if we haven't loaded up on resources
-                // TODO don't bother mining if we only need a tiny amount to fill up (like 1 karb)
                 if (r.me.karbonite < Utils.mySpecs(r).KARBONITE_CAPACITY && r.me.fuel < Utils.mySpecs(r).FUEL_CAPACITY) {
                     if (Utils.canMine(r)) {
                         // Harvest
                         return r.mine();
                     }
                 } else {
-                    // Change state and move
-                    state = State.MOVING_RESOURCE_HOME;
-                    return act(r);
+                    if (!(shouldExecuteLocalLeader(r) && localLeader(r))) {
+                        // Change state and move
+                        state = State.MOVING_RESOURCE_HOME;
+                        return act(r);
+                    }
                 }
             } else {
                 // Move towards Karbonite
