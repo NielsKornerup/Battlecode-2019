@@ -112,7 +112,7 @@ public class Prophet {
         }
 
         // 2. Move towards aggression point
-        return Utils.moveDijkstraThenRandom(r, enemyCastleMap, 2);
+        return Utils.moveDijkstra(r, enemyCastleMap, 2);
     }
     
     private static Action doTurtleActions(MyRobot r) {
@@ -123,7 +123,7 @@ public class Prophet {
         }
 
         // 2. Move towards aggression point
-        return Utils.moveDijkstraThenRandom(r, enemyCastleMap, 2);
+        return Utils.moveDijkstra(r, enemyCastleMap, 2);
     }
 
     public static Action act(MyRobot r) {

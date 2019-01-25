@@ -531,4 +531,27 @@ public class Utils {
         return clusters;
     }
 
+    public static Point getNonResourceSpotAround(MyRobot r, Point point) {
+        int[] dxes = {-1, 0, 1};
+        int[] dyes = {-1, 0, 1};
+        boolean[][] passable = r.getPassableMap();
+        boolean[][] karb = r.getKarboniteMap();
+        boolean[][] fuel = r.getFuelMap();
+        for (int dx : dxes) {
+            for (int dy : dyes) {
+                Point absolute = new Point(point.x + dx, point.y + dy);
+                int x = absolute.x;
+                int y = absolute.y;
+                if (x < 0 || y < 0 || y >= passable.length || y >= passable[0].length) {
+                    continue;
+                }
+
+                if (passable[y][x] && !karb[y][x] && !fuel[y][x]) {
+                    return absolute;
+                }
+            }
+        }
+        return null;
+    }
+
 }

@@ -7,6 +7,7 @@ import java.util.List;
 public class KarbFuelTargetQueue {
     private ArrayList<Point> allCastlePilgrimBuildLocations = new ArrayList<>();
     private PriorityQueue pilgrimLocationQueue = null;
+    private Point mostContestedPoint = null;
     
     public KarbFuelTargetQueue(MyRobot r, HashMap<Integer, Point> otherCastleLocations, List<Point> enemyCastleLocations) {
         HashMap<Integer, Navigation> castleIdToResourceMap = new HashMap<>();
@@ -33,6 +34,7 @@ public class KarbFuelTargetQueue {
         resourceLocationsToConsider.addAll(Utils.getFuelPoints(r));
 
         PriorityQueue pilgrimLocationQueue = new PriorityQueue();
+        double smallestContestedSpread = 1000000000;
         for (Point point : resourceLocationsToConsider) {
 
             // Find the Castle ID with smallest potential
@@ -48,18 +50,30 @@ public class KarbFuelTargetQueue {
                 }
             }
 
-            if (enemyMap.getPotential(point) * multiplier * 1.2 < smallestValue) {
+            double enemyComp = enemyMap.getPotential(point) * multiplier * Constants.ENEMY_RESOURCE_PENETRATION_PERCENTAGE;
+            if (enemyComp < smallestValue) {
                 continue;
             }
 
             allCastlePilgrimBuildLocations.add(point);
             if (smallestId == r.me.id) {
                 pilgrimLocationQueue.enqueue(new Node(smallestValue, point));
+
+                // Pick our most contested spot
+                double spread = enemyComp - smallestValue;
+                if (spread < smallestContestedSpread) {
+                    smallestContestedSpread = spread;
+                    mostContestedPoint = point;
+                }
             } else {
                 pilgrimLocationQueue.enqueue(new Node(smallestValue, new Point(-1, smallestId)));
             }
         }
         this.pilgrimLocationQueue = pilgrimLocationQueue;
+    }
+
+    public Point getMostContestedPoint() {
+        return mostContestedPoint;
     }
     
     public Point dequeue() {
