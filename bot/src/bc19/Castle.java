@@ -22,15 +22,14 @@ public class Castle {
 
     private static int churchesToAllowBuilding = 0;
     private static KarbFuelTargetQueue pilgrimLocationQueue;
-    
+    private static Point mostContestedPoint = null; // Tracks the point closest to enemy that aggressive unit should go for
+
     public static int pickUnitToBuild(MyRobot r) {
-        // NOTE: THIS METHOD MUST OPERATE COMPLETELY DETERMINISTICALLY
+        // NOTE: THIS METHOD MUST OPERATE COMPLETELY DETERMINISTICALLY AND NOT BE BASED ON TURN #
 
         int value = buildTypeTick % UNIT_TYPE_MODULUS;
 
         if (value == 9 && churchesToAllowBuilding > 0) {
-            // TODO this is dangerous
-            // TODO this doesn't actually coordinate between all castles
             return r.SPECS.CHURCH;
         }
 
@@ -95,6 +94,7 @@ public class Castle {
         } else if (r.turn == 5) {
             pilgrimLocationQueue = new KarbFuelTargetQueue(r, otherCastleLocations, Castle.enemyCastleLocations);
             churchesToAllowBuilding = computeNumChurchesToAllowBuilding(r, pilgrimLocationQueue.getAllCastlePilgrimBuildLocations());
+            mostContestedPoint = pilgrimLocationQueue.getMostContestedPoint();
             /*r.log("I'm doing: ");
             while (!pilgrimLocationQueue.isEmpty()) {
                 Node value = pilgrimLocationQueue.dequeue();
@@ -104,7 +104,6 @@ public class Castle {
             }*/
         }
     }
-
 
     private static void handleEnemyCastleKilledMessages(MyRobot r) {
         // Check for enemy castle killed messages
@@ -399,15 +398,6 @@ public class Castle {
         // boolean alreadyBroadcastedLocation = broadcastEnemyCastleLocationIfNeeded(r);
     	
     	// 1. If we haven't built any aggressive scout units yet, build them.
-        if (initialAggressiveScoutUnitsBuilt < Constants.NUM_AGGRESSIVE_SCOUT_UNITS_TO_BUILD) {
-            BuildAction action = Utils.tryAndBuildInOptimalSpace(r, r.SPECS.PROPHET);
-            if (action != null) {
-                // TODO Modify initial aggressive scout location to match the centroids we picked for our prophet
-                CommunicationUtils.sendAggressiveScoutLocation(r, Utils.getContestedKarboniteGuardPoint(r));
-                initialAggressiveScoutUnitsBuilt++;
-                return action;
-            }
-        }
 
         // TODO figure out when to intersperse building combat units
         if (r.turn > 5 && pickUnitToBuild(r) == r.SPECS.PILGRIM) { // TODO hardcoded constant
@@ -419,6 +409,19 @@ public class Castle {
             }
         }
 
+        if (mostContestedPoint != null && initialAggressiveScoutUnitsBuilt < Constants.NUM_AGGRESSIVE_SCOUT_UNITS_TO_BUILD) {
+            Point toGo = Utils.getNonResourceSpotAround(r, mostContestedPoint);
+            if (toGo != null) {
+                BuildAction action = Utils.tryAndBuildInOptimalSpace(r, r.SPECS.PROPHET);
+                if (action != null) {
+                    // Send our combat unit to the spot we're assigned to that's the closest to enemy
+                    r.log("Sending aggressive unit to " + toGo.x + " " + toGo.y);
+                    CommunicationUtils.sendAggressiveScoutLocation(r, toGo);
+                    initialAggressiveScoutUnitsBuilt++;
+                    return action;
+                }
+            }
+        }
         /*// 3. Spam crusaders at end of game
         if (r.turn > Constants.CASTLE_SPAM_CRUSADERS_TURN_THRESHOLD) {
             if (r.turn < Constants.FUEL_CAP_TURN_THRESHOLD || r.fuel > Constants.FUEL_CAP) {
