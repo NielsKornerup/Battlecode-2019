@@ -5,6 +5,7 @@ public class Castle {
 
     private static int initialAggressiveScoutUnitsBuilt = 0;
     private static int turtleUnitsBuilt = 6;
+    private static int crusaderUnitsBuilt = 20;
 
     private static HashMap<Integer, Point> pilgrimToTarget = new HashMap<>();
 
@@ -13,6 +14,7 @@ public class Castle {
     private static HashMap<Integer, Point> otherCastleLocations = new HashMap<>(); // Maps from unit ID to location
     private static ArrayList<Point> enemyCastleLocations = new ArrayList<>(); // Doesn't include the enemy castle that mirrors ours
     private static ArrayList<Point> latticeLocations = new ArrayList<>();
+    private static ArrayList<Point> latticeLocationsCrusader = new ArrayList<>();
 
     private static int tick = 0; // Used to prevent one castle from building more than other castles
     private static int tickMax = 1; // Threshold for building again
@@ -54,7 +56,8 @@ public class Castle {
         if (r.turn == 1) {
             // Send our X coordinate
             CastleTalkUtils.sendCastleCoord(r, r.me.x);
-            initializeLattice(r);
+            
+            //enemyCastleLocations
         } else if (r.turn == 2) {
             // Add X coordinates received from other castles
             for (Robot robot : r.getVisibleRobots()) {
@@ -92,6 +95,8 @@ public class Castle {
             for (Integer id : otherCastleLocations.keySet()) {
                 enemyCastleLocations.add(Utils.getMirroredPosition(r, otherCastleLocations.get(id)));
             }
+            initializeLattice(r);
+            
         } else if (r.turn == 5) {
             pilgrimLocationQueue = new KarbFuelTargetQueue(r, otherCastleLocations, Castle.enemyCastleLocations);
             churchesToAllowBuilding = computeNumChurchesToAllowBuilding(r, pilgrimLocationQueue.getAllCastlePilgrimBuildLocations());
@@ -228,22 +233,34 @@ public class Castle {
         	int dx = offset.x-((n-1)/2);
         	int dy = offset.y-((m-1)/2);
         	//checkerboard pattern
-        	if ((dx+dy+200)%2!=(myLoc.x+myLoc.y)%2){
-        		continue;
-        	}
+        	
         	/*
         	if (Math.abs(dx) < 2 || Math.abs(dy) < 2){
         		continue;
         	}
         	*/
         	Point mapLoc = new Point(myLoc.x+dx, myLoc.y+dy);
+        	boolean behindCastles = true;
+        	for (Point enemyLoc : enemyCastleLocations){
+        		if (Utils.computeManhattanDistance(myLoc,enemyLoc) >= (int)(Utils.computeManhattanDistance(enemyLoc,mapLoc)*1.2)){
+        			behindCastles = false;
+        		}
+        	}
         	
         	if (mapLoc.x>=0 && mapLoc.x < passableMap[0].length && mapLoc.y>=0 && mapLoc.y < passableMap.length 
-        			&& passableMap[mapLoc.y][mapLoc.x] && !karbMap[mapLoc.y][mapLoc.x] && !fuelMap[mapLoc.y][mapLoc.x]){
-        		latticeLocations.add(mapLoc);
+        			&& passableMap[mapLoc.y][mapLoc.x] && !karbMap[mapLoc.y][mapLoc.x] && !fuelMap[mapLoc.y][mapLoc.x]
+        			&& !behindCastles){
+        		if ((dx+dy+200)%2==(myLoc.x+myLoc.y)%2){
+        			latticeLocations.add(mapLoc);
+            	} else {
+            		latticeLocationsCrusader.add(0,mapLoc);
+            	}
+        		
         		//r.log("X: "+mapLoc.x+" Y: "+mapLoc.y);
         	}
         }
+        //Collections.reverse(latticeLocationsCrusader);
+        crusaderUnitsBuilt = latticeLocationsCrusader.size()-70;
         
     }
 
@@ -419,19 +436,24 @@ public class Castle {
             }
         }
 
-        /*// 3. Spam crusaders at end of game
+        // 3. Spam crusaders at end of game
         if (r.turn > Constants.CASTLE_SPAM_CRUSADERS_TURN_THRESHOLD) {
             if (r.turn < Constants.FUEL_CAP_TURN_THRESHOLD || r.fuel > Constants.FUEL_CAP) {
-                BuildAction action = Utils.tryAndBuildInRandomSpace(r, r.SPECS.CRUSADER);
+                BuildAction action = Utils.tryAndBuildInOptimalSpace(r, r.SPECS.CRUSADER);
                 if (action != null) {
-                    enemyCastleLocationIndex = 1;
+                    //enemyCastleLocationIndex = 1;
+                	if (crusaderUnitsBuilt<latticeLocationsCrusader.size())
+                		CommunicationUtils.sendTurtleLocation(r, latticeLocationsCrusader.get(crusaderUnitsBuilt));
+                    crusaderUnitsBuilt++;
+                    /*
                     if (!alreadyBroadcastedLocation) {
                         broadcastEnemyCastleLocationIfNeeded(r);
                     }
+                    */
                     return action;
                 }
             }
-        }*/
+        }
 
         // 4. Build a prophet.
         if (pickUnitToBuild(r) == r.SPECS.PROPHET) {
