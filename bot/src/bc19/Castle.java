@@ -13,7 +13,8 @@ public class Castle {
 
     private static HashMap<Integer, Point> otherCastleLocations = new HashMap<>(); // Maps from unit ID to location
     private static ArrayList<Point> enemyCastleLocations = new ArrayList<>(); // Doesn't include the enemy castle that mirrors ours
-    private static ArrayList<Point> latticeLocations = new ArrayList<Point>();
+    private static ArrayList<Point> latticeLocations = new ArrayList<>();
+    private static ArrayList<Point> allPilgrimBuildLocations = new ArrayList<>();
 
     private static PriorityQueue pilgrimLocationQueue = null;
 
@@ -23,12 +24,22 @@ public class Castle {
     private static int buildTypeTick = 0;
     private static final int UNIT_TYPE_MODULUS = 10;
 
+    private static int churchesToAllowBuilding = 0;
+
     public static int pickUnitToBuild(MyRobot r) {
+        int value = buildTypeTick % UNIT_TYPE_MODULUS;
+
+        if (value == 9 && churchesToAllowBuilding > 0) {
+            // TODO this is dangerous
+            // TODO this doesn't actually coordinate between all castles
+            return -1;
+        }
+
         if (pilgrimLocationQueue != null && pilgrimLocationQueue.isEmpty()) {
             return r.SPECS.PROPHET;
         }
 
-        int value = buildTypeTick % UNIT_TYPE_MODULUS;
+
         if (value < 2) {
             return r.SPECS.PILGRIM;
         } else if (value < 5) {
@@ -84,7 +95,7 @@ public class Castle {
             }
         } else if (r.turn == 5) {
             pilgrimLocationQueue = generatePilgrimLocationQueue(r, otherCastleLocations);
-
+            churchesToAllowBuilding = determineNumChurchesToBuild(r, allPilgrimBuildLocations);
             /*r.log("I'm doing: ");
             while (!pilgrimLocationQueue.isEmpty()) {
                 Node value = pilgrimLocationQueue.dequeue();
@@ -141,6 +152,7 @@ public class Castle {
 
             if (smallestId == r.me.id) {
                 pilgrimLocationQueue.enqueue(new Node(smallestValue, point));
+                allPilgrimBuildLocations.add(point);
             } else {
                 pilgrimLocationQueue.enqueue(new Node(smallestValue, new Point(-1, smallestId)));
             }
@@ -358,6 +370,25 @@ public class Castle {
         }
     }
 
+    private static int determineNumChurchesToBuild(MyRobot r, ArrayList<Point> candidates) {
+        List<Point> centroids = Utils.getClusterLocations(candidates);
+        r.log("Centroids are: ");
+        for (Point point : centroids) {
+            r.log(point.x + " " + point.y);
+        }
+
+        List<Point> toBuild = new ArrayList<>();
+        // Eliminate centroids that are within our radius
+        for (Point point : centroids) {
+            if (Utils.computeEuclideanDistance(Utils.myLocation(r), point) > Constants.MIN_CHURCH_BUILD_DISTANCE) {
+                toBuild.add(point);
+            }
+        }
+
+        r.log("We are going to build " + toBuild.size() + " churches.");
+        return toBuild.size() - 1; // TODO remove the -1 here?
+    }
+
     public static Action act(MyRobot r) {
         removeDeadFriendlyCastles(r);
         if (r.turn > 5) { // TODO hardcoded constant
@@ -365,6 +396,13 @@ public class Castle {
         }
         updatePilgrimLocations(r);
         handleCastleTalk(r);
+
+        for (Robot robot : r.getVisibleRobots()) {
+            if (pilgrimToTarget.keySet().contains(robot.id) && CastleTalkUtils.pilgrimDoneBuildingChurch(r, robot)) {
+                churchesToAllowBuilding--;
+                buildTypeTick++; // TODO make sure this isn't starving units
+            }
+        }
 
         // If it's close to the end of the game, and we're down Castles, send attack message!
         if (r.turn >= Constants.ATTACK_TURN && r.turn % 50 == 0 && otherCastleLocations.size() + 1 < enemyCastleLocations.size()) {

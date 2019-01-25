@@ -399,6 +399,10 @@ public class Utils {
     	return (p1.x-p2.x)*(p1.x-p2.x) + (p1.y-p2.y)*(p1.y-p2.y);
     }
 
+    public static double computeEuclideanDistance(Point p1, Point p2) {
+        return Math.sqrt((double) computeSquareDistance(p1, p2));
+    }
+
     public static int computeManhattanDistance(Point p1, Point p2) {
     	return Math.abs(p1.x-p2.x) + Math.abs(p1.y-p2.y);
     }
@@ -503,7 +507,7 @@ public class Utils {
         return finalPoint;
     }
 
-    public static ArrayList<Point> getClusterLocations(ArrayList<Point> candidates) {
+    public static List<Point> getClusterLocations(ArrayList<Point> candidates) {
         HashMap<Integer, Integer> consumed = new HashMap<>();
         ArrayList<Point> clusters = new ArrayList<>();
 

@@ -91,7 +91,8 @@ public class Pilgrim {
             	if(Utils.canBuild(r,  r.SPECS.CHURCH) && castleMap.getPotential(Utils.myLocation(r)) > Constants.MIN_CHURCH_BUILD_DISTANCE) {
             	    Action buildAction = Utils.tryAndBuildChurch(r);
             	    if (buildAction != null) {
-            	        return null;
+                        CastleTalkUtils.sendPilgrimDoneBuildingChurch(r);
+            	        return buildAction;
                     }
             	}
                 // Check if we haven't loaded up on resources
@@ -108,7 +109,7 @@ public class Pilgrim {
                 }
             } else {
                 // Move towards Karbonite
-                return Utils.moveDijkstraThenRandom(r, targetMap, 2);
+                return Utils.moveDijkstra(r, targetMap, 2);
             }
         }
 
@@ -129,7 +130,7 @@ public class Pilgrim {
                 }
             } else {
                 // Move towards nearby Castle
-                return Utils.moveDijkstraThenRandom(r, castleMap, 2);
+                return Utils.moveDijkstra(r, castleMap, 2);
             }
         }
 

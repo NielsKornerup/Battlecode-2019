@@ -8,8 +8,7 @@ public class CastleTalkUtils {
     private static final byte CASTLE_LOCATION_COMMUNICATION_MASK = (byte) (0b11 << ARGUMENT_SIZE_BITS);
     private static final byte ENEMY_CASTLE_KILLED_MASK = (byte) (0b10 << ARGUMENT_SIZE_BITS);
     private static final byte FRIENDLY_PILGRIM_SPAWNED_MASK = (byte) (0b00000001);
-    private static final byte WAITING_TO_BUILD_CHURCH_MASK = (byte) (0b00000010);
-    private static final byte DONE_BUILDING_CHURCH_MASK = (byte) (0b00000011);
+    private static final byte DONE_BUILDING_CHURCH_MASK = (byte) (0b00000010);
 
     private static void sendCastleTalk(MyRobot r, byte message) {
         r.castleTalk(message);
@@ -58,8 +57,8 @@ public class CastleTalkUtils {
         sendCastleTalk(r, (byte) 0);
     }
 
-    public static boolean pilgrimWaitingToBuildChurch(MyRobot r, Robot other) {
-        return ((byte) other.castle_talk == WAITING_TO_BUILD_CHURCH_MASK);
+    public static void sendPilgrimDoneBuildingChurch(MyRobot r) {
+        sendCastleTalk(r, DONE_BUILDING_CHURCH_MASK);
     }
 
     public static boolean pilgrimDoneBuildingChurch(MyRobot r, Robot other) {
