@@ -15,6 +15,9 @@ public class Castle {
 
     private static PriorityQueue pilgrimLocationQueue = null;
 
+    private static int tick = 0; // Used to prevent one castle from building more than other castles
+    private static int tickMax = 1; // Threshold for building again
+
     public static void handleCastleLocationMessages(MyRobot r) {
         if (r.turn == 1) {
             // Send our X coordinate
@@ -189,19 +192,18 @@ public class Castle {
             r.log("Castle " + deadCastle + " has died.");
             otherCastleLocations.remove(deadCastle);
         }
+        tickMax = otherCastleLocations.size() + 1;
     }
 
     private static void cleanupPilgrimQueue(MyRobot r) {
         Node toBuild = pilgrimLocationQueue.peek();
         if (toBuild == null) {
-            r.log("No more pilgrims to build.");
             return;
         }
 
         if (toBuild.p.x == -1) {
             // Not our responsibility, but check if castle is dead and remove
             if (!otherCastleLocations.containsKey(toBuild.p.y)) {
-                r.log("This boi is dead!");
                 pilgrimLocationQueue.dequeue();
                 cleanupPilgrimQueue(r);
                 return;
@@ -215,7 +217,6 @@ public class Castle {
         // Check if its our turn
         Node pilgrimTarget = pilgrimLocationQueue.peek();
         if (pilgrimTarget == null) {
-            r.log("No more pilgrims to build");
             return null;
         }
         // Invariant: pilgrimTarget will never be the Node for a dead castle
@@ -320,7 +321,7 @@ public class Castle {
                     return action;
                 }
             }
-        }
+        }*/
 
         // 4. Build a prophet.
         if (r.turn <= Constants.CASTLE_CREATE_COMBAT_PROPHETS_TURN_THRESHOLD) {
@@ -332,16 +333,25 @@ public class Castle {
             }
         } else {
             if (r.turn < Constants.FUEL_CAP_TURN_THRESHOLD || r.fuel > Constants.FUEL_CAP) {
-                BuildAction action = Utils.tryAndBuildInOptimalSpace(r, r.SPECS.PROPHET);
-                if (action != null) {
-                    enemyCastleLocationIndex = 1;
-                    if (!alreadyBroadcastedLocation) {
-                        broadcastEnemyCastleLocationIfNeeded(r);
+                // TODO ignore the tick if in emergency (i.e. enemy military is approaching)
+                // TODO prioritize the castle closer to the enemy at the beginning of the game
+                // Increment tick when we have the opportunity to build
+                if (Utils.canBuild(r, r.SPECS.PROPHET) && tick < tickMax) {
+                    tick++;
+                }
+                if (tick >= tickMax) {
+                    BuildAction action = Utils.tryAndBuildInOptimalSpace(r, r.SPECS.PROPHET);
+                    if (action != null) {
+                        enemyCastleLocationIndex = 1;
+                        if (!alreadyBroadcastedLocation) {
+                            broadcastEnemyCastleLocationIfNeeded(r);
+                        }
+                        tick = 0;
+                        return action;
                     }
-                    return action;
                 }
             }
-        }*/
+        }
 
         // 6. Finally, if we cannot build anything, attack if there are enemies in range.
         AttackAction attackAction = Utils.tryAndAttack(r, Constants.CASTLE_ATTACK_RADIUS_SQ);
