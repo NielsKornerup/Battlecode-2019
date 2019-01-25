@@ -33,17 +33,17 @@ public class RobotSort implements Comparable<RobotSort> {
 	*/
 	
 	public static int getPriority(int type){
-		if (type == Constants.PREACHER_UNIT_TYPE)
+		if (type == Constants.PREACHER)
 			return 0;
-		if (type == Constants.PROPHET_UNIT_TYPE)
+		if (type == Constants.PROPHET)
 			return 1;
-		if (type == Constants.CRUSADER_UNIT_TYPE)
+		if (type == Constants.CRUSADER)
 			return 2;
-		if (type == Constants.CASTLE_UNIT_TYPE)
+		if (type == Constants.CASTLE)
 			return 3;
-		if (type == Constants.CHURCH_UNIT_TYPE)
+		if (type == Constants.CHURCH)
 			return 4;
-		if (type == Constants.PILGRIM_UNIT_TYPE)
+		if (type == Constants.PILGRIM)
 			return 5;
 		
 		return -1;

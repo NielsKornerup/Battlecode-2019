@@ -53,6 +53,7 @@ public class CastleTalkUtils {
     }
 
     public static void invalidate(MyRobot r) {
+        // TODO not sure if sending 0 is safe
         sendCastleTalk(r, (byte) 0);
     }
 }

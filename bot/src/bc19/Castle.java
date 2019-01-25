@@ -1,6 +1,5 @@
 package bc19;
 
-import java.lang.Math;
 import java.util.*;
 
 public class Castle {
@@ -20,6 +19,26 @@ public class Castle {
 
     private static int tick = 0; // Used to prevent one castle from building more than other castles
     private static int tickMax = 1; // Threshold for building again
+
+    private static int buildTypeTick = 0;
+    private static final int UNIT_TYPE_MODULUS = 10;
+
+    public static int pickUnitToBuild(MyRobot r) {
+        if (pilgrimLocationQueue != null && pilgrimLocationQueue.isEmpty()) {
+            return r.SPECS.PROPHET;
+        }
+
+        int value = buildTypeTick % UNIT_TYPE_MODULUS;
+        if (value < 2) {
+            return r.SPECS.PILGRIM;
+        } else if (value < 5) {
+            return r.SPECS.PROPHET;
+        } else if (value < 8) {
+            return r.SPECS.PILGRIM;
+        } else {
+            return r.SPECS.PROPHET;
+        }
+    }
 
     public static void handleCastleLocationMessages(MyRobot r) {
         if (r.turn == 1) {
@@ -259,7 +278,6 @@ public class Castle {
         	}
         	*/
         	Point mapLoc = new Point(myLoc.x+dx, myLoc.y+dy);
-        	r.log("dx: "+dx+" dy: "+dy);
         	
         	if (mapLoc.x>=0 && mapLoc.x < passableMap[0].length && mapLoc.y>=0 && mapLoc.y < passableMap.length 
         			&& passableMap[mapLoc.y][mapLoc.x] && !karbMap[mapLoc.y][mapLoc.x] && !fuelMap[mapLoc.y][mapLoc.x]){
@@ -376,10 +394,11 @@ public class Castle {
         }*/
 
         // TODO figure out when to intersperse building combat units
-        if (r.turn > 5) { // TODO hardcoded constant
+        if (r.turn > 5 && pickUnitToBuild(r) == r.SPECS.PILGRIM) { // TODO hardcoded constant
             // 2. Build pilgrims if its our turn
             BuildAction action = buildPilgrimIfNeeded(r);
             if (action != null) {
+                buildTypeTick++;
                 return action;
             }
         }
@@ -399,40 +418,42 @@ public class Castle {
         }*/
 
         // 4. Build a prophet.
-        if (r.turn <= Constants.CASTLE_CREATE_COMBAT_PROPHETS_TURN_THRESHOLD) {
-            // Only build a prophet if we've detected enemies nearby and there are no prophets
-            int numEnemyUnits = Utils.getRobotsInRange(r, -1, false, 0, 1000).size();
-            int numFriendlyProphets = Utils.getRobotsInRange(r, r.SPECS.PROPHET, true, 0, 1000).size();
-            if (numFriendlyProphets < numEnemyUnits) {
-                BuildAction action = Utils.tryAndBuildInOptimalSpace(r, r.SPECS.PROPHET);
-            
-                if (action != null) {
-	                CommunicationUtils.sendTurtleLocation(r, latticeLocations.get(turtleUnitsBuilt));
-	                turtleUnitsBuilt++;
-	                return action;
-	            }
-            }
-        } else {
-            if (r.turn < Constants.FUEL_CAP_TURN_THRESHOLD || r.fuel > Constants.FUEL_CAP) {
-                BuildAction action = Utils.tryAndBuildInOptimalSpace(r, r.SPECS.PROPHET);
-                // TODO ignore the tick if in emergency (i.e. enemy military is approaching)
-                // TODO prioritize the castle closer to the enemy at the beginning of the game
-                // Increment tick when we have the opportunity to build
-                if (Utils.canBuild(r, r.SPECS.PROPHET) && tick < tickMax) {
-                    tick++;
-                }
-                if (tick >= tickMax) {
-                    //BuildAction action = Utils.tryAndBuildInOptimalSpace(r, r.SPECS.PROPHET);
+        if (pickUnitToBuild(r) == r.SPECS.PROPHET) {
+            if (r.turn <= Constants.CASTLE_CREATE_COMBAT_PROPHETS_TURN_THRESHOLD) {
+                // Only build a prophet if we've detected enemies nearby and there are no prophets
+                int numEnemyUnits = Utils.getRobotsInRange(r, -1, false, 0, 1000).size();
+                int numFriendlyProphets = Utils.getRobotsInRange(r, r.SPECS.PROPHET, true, 0, 1000).size();
+                if (numFriendlyProphets < numEnemyUnits) {
+                    BuildAction action = Utils.tryAndBuildInOptimalSpace(r, r.SPECS.PROPHET);
+
                     if (action != null) {
-                        enemyCastleLocationIndex = 1;
+                        CommunicationUtils.sendTurtleLocation(r, latticeLocations.get(turtleUnitsBuilt));
+                        turtleUnitsBuilt++;
+                        return action;
+                    }
+                }
+            } else {
+                if (r.turn < Constants.FUEL_CAP_TURN_THRESHOLD || r.fuel > Constants.FUEL_CAP) {
+                    // TODO ignore the tick if in emergency (i.e. enemy military is approaching)
+                    // TODO prioritize the castle closer to the enemy at the beginning of the game
+                    // Increment tick when we have the opportunity to build
+                    if (Utils.canBuild(r, r.SPECS.PROPHET) && tick < tickMax) {
+                        tick++;
+                    }
+                    if (tick >= tickMax) {
+                        BuildAction action = Utils.tryAndBuildInOptimalSpace(r, r.SPECS.PROPHET);
+                        if (action != null) {
+                            enemyCastleLocationIndex = 1;
                         /* Commented out for now in favor of telling it where to go on the lattice
                         /*if (!alreadyBroadcastedLocation) {
                             broadcastEnemyCastleLocationIfNeeded(r);
                         }*/
-                        tick = 0;
-                        CommunicationUtils.sendTurtleLocation(r, latticeLocations.get(turtleUnitsBuilt));
-                        turtleUnitsBuilt++;
-                        return action;
+                            tick = 0;
+                            CommunicationUtils.sendTurtleLocation(r, latticeLocations.get(turtleUnitsBuilt));
+                            turtleUnitsBuilt++;
+                            buildTypeTick++;
+                            return action;
+                        }
                     }
                 }
             }
