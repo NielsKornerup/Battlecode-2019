@@ -54,6 +54,14 @@ public class PriorityQueue {
         return last;
     }
 
+    public Node peek() {
+        if (size() == 0) {
+            return null;
+        } else {
+            return heap.get(0);
+        }
+    }
+
     public boolean delete(Point p) {
         if (this.heap.size() == 0) {
             return false;

@@ -11,6 +11,7 @@ public class CommunicationUtils {
 	static final short PROPHET_ATTACK_MASK = (short) (0b100 << ARGUMENT_SIZE_BITS);
 	static final short ENEMY_CASTLE_LOCATION_MASK = (short) (0b011 << ARGUMENT_SIZE_BITS);
 	static final short AGGRESSIVE_SCOUT_MASK = (short) (0b010 << ARGUMENT_SIZE_BITS);
+	static final short CASTLE_INFORM_MASK = (short) (0b001 << ARGUMENT_SIZE_BITS);
 
 	public static final int PILGRIM_TARGET_RADIUS_SQ = 2;
 	private static final int ATTACK_SIGNAL_RADIUS_SQ = 5;
@@ -112,9 +113,9 @@ public class CommunicationUtils {
 		return false;
 	}
 
-	public static boolean sendPilgrimTargetMessage(MyRobot r, Point target) {
+	public static boolean sendPilgrimTargetMessage(MyRobot r, Point target, int radius) {
 		short message = (short) (PILGRIM_TARGET_MASK | ((short) target.x << 6) | ((short) target.y));
-		return sendBroadcast(r, message, PILGRIM_TARGET_RADIUS_SQ);
+		return sendBroadcast(r, message, radius);
 	}
 
 	/*
@@ -124,6 +125,19 @@ public class CommunicationUtils {
 	 */
 	public static Point getPilgrimTargetInfo(MyRobot r, Robot other) {
 		if (r.isRadioing(other) && instructionMatches(PILGRIM_TARGET_MASK, other.signal)) {
+			short message = (short) other.signal;
+			return new Point((message / (64)) % 64, message % 64);
+		}
+		return null;
+	}
+
+	public static void sendPilgrimInfoToCastle(MyRobot r, Point target, int range) {
+		short message = (short) (CASTLE_INFORM_MASK | (target.x << 6) | target.y);
+		sendBroadcast(r, message, range);
+	}
+
+	public static Point getPilgrimTargetForCastle(MyRobot r, Robot other) {
+		if (r.isRadioing(other) && instructionMatches(CASTLE_INFORM_MASK, other.signal)) {
 			short message = (short) other.signal;
 			return new Point((message / (64)) % 64, message % 64);
 		}

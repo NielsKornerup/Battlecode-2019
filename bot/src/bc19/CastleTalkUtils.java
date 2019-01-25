@@ -8,6 +8,7 @@ public class CastleTalkUtils {
     private static final byte CASTLE_LOCATION_COMMUNICATION_MASK = (byte) (0b11 << ARGUMENT_SIZE_BITS);
     private static final byte ENEMY_CASTLE_KILLED_MASK = (byte) (0b10 << ARGUMENT_SIZE_BITS);
     private static final byte FRIENDLY_CASTLE_KILLED_MASK = (byte) (0b01 << ARGUMENT_SIZE_BITS);
+    private static final byte FRIENDLY_PILGRIM_SPAWNED_MASK = (byte) (0b00101000);
 
     private static void sendCastleTalk(MyRobot r, byte message) {
         r.castleTalk(message);
@@ -43,4 +44,15 @@ public class CastleTalkUtils {
         sendCastleTalk(r, message);
     }
 
+    public static void sendFriendlyPilgrimSpawned(MyRobot r) {
+        sendCastleTalk(r, FRIENDLY_PILGRIM_SPAWNED_MASK);
+    }
+
+    public static boolean friendlyPilgrimSpawned(MyRobot r, Robot other) {
+        return ((byte) other.castle_talk) == FRIENDLY_PILGRIM_SPAWNED_MASK;
+    }
+
+    public static void invalidate(MyRobot r) {
+        sendCastleTalk(r, (byte) 0);
+    }
 }
