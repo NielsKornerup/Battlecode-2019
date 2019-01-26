@@ -148,6 +148,22 @@ public class Castle {
         handleCastleLocationMessages(r);
         handleEnemyCastleKilledMessages(r);
     }
+    
+    private static boolean nearEnemyCastle(MyRobot r) {
+    	int closestSquareDistanceForOtherCastles = Constants.MAX_INT;
+    	for(Point mine: Castle.otherCastleLocations.values()) {
+    		for(Point p: enemyCastleLocations) {
+    			closestSquareDistanceForOtherCastles = Math.min(closestSquareDistanceForOtherCastles, Utils.computeSquareDistance(mine, p));
+    		}
+    	}
+    	
+    	int closestSquareDistanceForMe = Constants.MAX_INT;
+    	for(Point p: enemyCastleLocations) {
+    		closestSquareDistanceForMe = Math.min(closestSquareDistanceForMe, Utils.computeSquareDistance(Utils.myLocation(r), p));
+    	}
+    	
+    	return closestSquareDistanceForMe <= closestSquareDistanceForOtherCastles;
+    }
 
     private static void removeDeadFriendlyCastles(MyRobot r) {
         Robot[] robots = r.getVisibleRobots();
@@ -168,7 +184,8 @@ public class Castle {
             r.log("Castle " + deadCastle + " has died.");
             otherCastleLocations.remove(deadCastle);
         }
-        tickMax = otherCastleLocations.size() + 1;
+        tickMax = nearEnemyCastle(r) ? otherCastleLocations.size() : otherCastleLocations.size() + 1;
+        
     }
 
     private static void cleanupPilgrimQueue(MyRobot r) {
