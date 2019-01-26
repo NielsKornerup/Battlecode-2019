@@ -148,6 +148,10 @@ public class Castle {
         handleCastleLocationMessages(r);
         handleEnemyCastleKilledMessages(r);
     }
+    
+    private static boolean nearEnemyCastle(MyRobot r) {
+    	
+    }
 
     private static void removeDeadFriendlyCastles(MyRobot r) {
         Robot[] robots = r.getVisibleRobots();
@@ -168,7 +172,8 @@ public class Castle {
             r.log("Castle " + deadCastle + " has died.");
             otherCastleLocations.remove(deadCastle);
         }
-        tickMax = otherCastleLocations.size() + 1;
+        tickMax = otherCastleLocations.size();
+        
     }
 
     private static void cleanupPilgrimQueue(MyRobot r) {
