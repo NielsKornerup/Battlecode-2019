@@ -1,0 +1,3009 @@
+var __extends = (this && this.__extends) || function (d, b) {
+    for (var p in b) if (b.hasOwnProperty(p)) d[p] = b[p];
+    function __() { this.constructor = d; }
+    d.prototype = b === null ? Object.create(b) : (__.prototype = b.prototype, new __());
+};
+/* Generated from Java with JSweet 2.0.0-SNAPSHOT - http://www.jsweet.org */
+var bc19;
+(function (bc19) {
+    /**
+     * Created by patil215 on 1/18/19.
+     * @class
+     */
+    var Crusader = (function () {
+        function Crusader() {
+        }
+        Crusader.act = function (r) {
+            if (r.__turn === 1) {
+                Crusader.initialCastleLocation = bc19.Utils.getSpawningCastleOrChurchLocation(r);
+                Crusader.enemyCastleLocation = bc19.Utils.getMirroredPosition(r, Crusader.initialCastleLocation);
+                Crusader.doCrusaderInitialization(r);
+            }
+            var attackAction = bc19.Utils.tryAndAttack(r, bc19.Utils.mySpecs(r).ATTACK_RADIUS[1]);
+            if (attackAction != null) {
+                return attackAction;
+            }
+            return bc19.Utils.moveDijkstraThenRandom(r, Crusader.enemyCastleMap, 3);
+        };
+        /*private*/ Crusader.doCrusaderInitialization = function (r) {
+            {
+                var array122 = r.getVisibleRobots();
+                for (var index121 = 0; index121 < array122.length; index121++) {
+                    var robot = array122[index121];
+                    {
+                        if (bc19.CommunicationUtils.receivedTurtleLocation(r, robot)) {
+                            Crusader.isTurtle = true;
+                            var targets = ([]);
+                            /* add */ (targets.push(bc19.CommunicationUtils.getTurtleLocation(r, robot)) > 0);
+                            Crusader.enemyCastleMap = new bc19.Navigation(r, r.getPassableMap(), targets);
+                            break;
+                        }
+                    }
+                }
+            }
+        };
+        return Crusader;
+    }());
+    Crusader.initialCastleLocation = null;
+    Crusader.enemyCastleLocation = null;
+    Crusader.isTurtle = false;
+    Crusader.enemyCastleMap = null;
+    bc19.Crusader = Crusader;
+    Crusader["__class"] = "bc19.Crusader";
+})(bc19 || (bc19 = {}));
+(function (bc19) {
+    var Utils = (function () {
+        function Utils() {
+        }
+        Utils.findClosestPointManhattan = function (r, points) {
+            var bestPoint = null;
+            var bestDistance = 100000;
+            for (var index123 = 0; index123 < points.length; index123++) {
+                var point = points[index123];
+                {
+                    var newDistance = Utils.computeManhattanDistance(Utils.myLocation(r), new bc19.Point(point.x, point.y));
+                    if (newDistance < bestDistance) {
+                        bestDistance = newDistance;
+                        bestPoint = point;
+                    }
+                }
+            }
+            return bestPoint;
+        };
+        Utils.isNearbySpaceEmpty = function (r, delta) {
+            var passableMap = r.getPassableMap();
+            var visibleRobotMap = r.getVisibleRobotMap();
+            var newX = r.me.x + delta.x;
+            var newY = r.me.y + delta.y;
+            if (newX < 0 || newY < 0 || newY >= passableMap.length || newX >= passableMap[0].length) {
+                return false;
+            }
+            return passableMap[newY][newX] && (visibleRobotMap[newY][newX] <= 0);
+        };
+        Utils.canMove = function (r, delta) {
+            return Utils.isNearbySpaceEmpty(r, delta) && Utils.enoughFuelToMove(r, delta.x, delta.y);
+        };
+        Utils.canMine = function (r) {
+            return r.fuel >= bc19.Constants.PILGRIM_MINE_FUEL_COST;
+        };
+        Utils.canAttack = function (r, delta) {
+            var dx = delta.x;
+            var dy = delta.y;
+            var rSquared = dx * dx + dy * dy;
+            return rSquared >= Utils.mySpecs(r).ATTACK_RADIUS[0] && rSquared <= Utils.mySpecs(r).ATTACK_RADIUS[1] && r.fuel >= Utils.mySpecs(r).ATTACK_FUEL_COST;
+        };
+        Utils.canSignal = function (r, radiusSq) {
+            return r.fuel >= Math.ceil(Math.sqrt(radiusSq));
+        };
+        Utils.canBuild = function (r, unitToBuild) {
+            return r.karbonite >= Utils.getSpecs(r, unitToBuild).CONSTRUCTION_KARBONITE && r.fuel >= Utils.getSpecs(r, unitToBuild).CONSTRUCTION_FUEL;
+        };
+        Utils.tryAndAttack = function (r, attackRadiusSq) {
+            var enemiesNearby = Utils.getRobotSortInRange(r, false, 0, attackRadiusSq);
+            if (enemiesNearby.length > 0) {
+                for (var index124 = 0; index124 < enemiesNearby.length; index124++) {
+                    var target = enemiesNearby[index124];
+                    {
+                        var attackPoint = new bc19.Point(target.x - r.me.x, target.y - r.me.y);
+                        if (Utils.canAttack(r, attackPoint)) {
+                            return r.attack(attackPoint.x, attackPoint.y);
+                        }
+                    }
+                }
+            }
+            return null;
+        };
+        Utils.tryAndBuildInRandomSpace = function (r, unitToBuild) {
+            var freeSpaces = Utils.getAdjacentFreeSpaces(r);
+            if (freeSpaces.length === 0) {
+                return null;
+            }
+            var location = freeSpaces[((Math.random() * freeSpaces.length) | 0)];
+            if (Utils.canBuild(r, unitToBuild)) {
+                return r.buildUnit(unitToBuild, location.x, location.y);
+            }
+            return null;
+        };
+        Utils.tryAndBuildInDirectionOf = function (r, point, unitToBuild) {
+            var freeSpaces = Utils.getAdjacentFreeSpaces(r);
+            if (freeSpaces.length === 0) {
+                return null;
+            }
+            var minDist = 100000;
+            var myLoc = Utils.myLocation(r);
+            var bestPoint = freeSpaces[0];
+            for (var index125 = 0; index125 < freeSpaces.length; index125++) {
+                var adj = freeSpaces[index125];
+                {
+                    var absolute = new bc19.Point(myLoc.x + adj.x, myLoc.y + adj.y);
+                    var distance = Utils.computeEuclideanDistance(absolute, point);
+                    if (distance < minDist) {
+                        bestPoint = adj;
+                        minDist = distance;
+                    }
+                }
+            }
+            if (Utils.canBuild(r, unitToBuild)) {
+                return r.buildUnit(unitToBuild, bestPoint.x, bestPoint.y);
+            }
+            return null;
+        };
+        Utils.tryAndBuildInOptimalSpace = function (r, unitToBuild) {
+            var freeSpaces = Utils.getAdjacentFreeSpaces(r);
+            if (freeSpaces.length === 0) {
+                return null;
+            }
+            var bestPoint = freeSpaces[0];
+            var myLoc = Utils.myLocation(r);
+            var enemyLoc = Utils.getMirroredPosition(r, myLoc);
+            var smallestDistance = 1000;
+            for (var index126 = 0; index126 < freeSpaces.length; index126++) {
+                var adj = freeSpaces[index126];
+                {
+                    var dist = Utils.computeManhattanDistance(new bc19.Point(adj.x + myLoc.x, adj.y + myLoc.y), enemyLoc);
+                    if (dist < smallestDistance) {
+                        smallestDistance = dist;
+                        bestPoint = adj;
+                    }
+                }
+            }
+            if (Utils.canBuild(r, unitToBuild)) {
+                return r.buildUnit(unitToBuild, bestPoint.x, bestPoint.y);
+            }
+            return null;
+        };
+        Utils.tryAndBuildChurch = function (r) {
+            var deltas = Utils.getAdjacentFreeSpaces(r);
+            if (deltas.length === 0) {
+                return null;
+            }
+            var bestDelta = deltas[0];
+            var bestResourceCount = 0;
+            for (var index127 = 0; index127 < deltas.length; index127++) {
+                var delta = deltas[index127];
+                {
+                    var absolute = new bc19.Point(r.me.x + delta.x, r.me.y + delta.y);
+                    if (Utils.hasResource(r, absolute)) {
+                        continue;
+                    }
+                    var newResourceCount = Utils.getAdjacentResourceCount(r, absolute);
+                    if (newResourceCount > bestResourceCount) {
+                        bestResourceCount = newResourceCount;
+                        bestDelta = delta;
+                    }
+                }
+            }
+            return r.buildUnit(r.SPECS.CHURCH, bestDelta.x, bestDelta.y);
+        };
+        Utils.moveDijkstra = function (r, map, radius) {
+            var delta = map.getNextMove(radius);
+            if (delta != null) {
+                return r.move(delta.x, delta.y);
+            }
+            return null;
+        };
+        Utils.moveDijkstraThenRandom = function (r, map, radius) {
+            var action = Utils.moveDijkstra(r, map, radius);
+            if (action != null) {
+                return action;
+            }
+            var karb = r.getKarboniteMap();
+            if (karb[r.me.y][r.me.x]) {
+                return Utils.moveRandom(r);
+            }
+            if (r.fuel > 5 * Utils.mySpecs(r).FUEL_PER_MOVE) {
+                return null;
+            }
+            return null;
+        };
+        Utils.getSpecs = function (r, unitType) {
+            return r.SPECS.UNITS[unitType];
+        };
+        Utils.mySpecs = function (r) {
+            return Utils.getSpecs(r, r.me.unit);
+        };
+        Utils.moveRandom = function (r) {
+            var candidates = Utils.getFreeSpaces(r, (Math.sqrt(Utils.mySpecs(r).SPEED) | 0));
+            if (candidates.length === 0) {
+                return null;
+            }
+            while ((candidates.length > 0)) {
+                var index = ((Math.random() * candidates.length) | 0);
+                var move = candidates[index];
+                if (Utils.canMove(r, move)) {
+                    return r.move(move.x, move.y);
+                }
+                /* remove */ candidates.splice(index, 1);
+            }
+            ;
+            return null;
+        };
+        Utils.getFuelCost = function (r, dx, dy) {
+            var rSquared = dx * dx + dy * dy;
+            var fuelPerMove = 1;
+            if (r.me.unit === r.SPECS.CRUSADER) {
+                fuelPerMove = bc19.Constants.CRUSADER_FUEL_PER_MOVE;
+            }
+            else if (r.me.unit === r.SPECS.PILGRIM) {
+                fuelPerMove = bc19.Constants.PILGRIM_FUEL_PER_MOVE;
+            }
+            else if (r.me.unit === r.SPECS.PREACHER) {
+                fuelPerMove = bc19.Constants.PREACHER_FUEL_PER_MOVE;
+            }
+            else if (r.me.unit === r.SPECS.PROPHET) {
+                fuelPerMove = bc19.Constants.PROPHET_FUEL_PER_MOVE;
+            }
+            return fuelPerMove * rSquared;
+        };
+        Utils.enoughFuelToMove = function (r, dx, dy) {
+            return r.fuel >= Utils.getFuelCost(r, dx, dy);
+        };
+        Utils.getFreeSpaces = function (r, range) {
+            var freeSpaces = ([]);
+            for (var dx = -range; dx <= range; dx++) {
+                for (var dy = -range; dy <= range; dy++) {
+                    if (dx * dx + dy * dy > range * range) {
+                        continue;
+                    }
+                    var delta = new bc19.Point(dx, dy);
+                    if (Utils.isNearbySpaceEmpty(r, delta)) {
+                        /* add */ (freeSpaces.push(delta) > 0);
+                    }
+                }
+                ;
+            }
+            ;
+            return freeSpaces;
+        };
+        Utils.isOn = function (r, other) {
+            return r.me.x === other.x && r.me.y === other.y;
+        };
+        Utils.isAdjacentOrOn = function (r, other) {
+            return Math.abs(r.me.x - other.x) <= 1 && Math.abs(r.me.y - other.y) <= 1;
+        };
+        Utils.isBetween = function (a, b, test) {
+            return (b.x - a.x) * (test.x - a.x) + (b.y - a.y) * (test.y - a.y) >= 1;
+        };
+        Utils.getAdjacentRobots = function (r, unitType, myTeam) {
+            var nearby = ([]);
+            {
+                var array129 = r.getVisibleRobots();
+                for (var index128 = 0; index128 < array129.length; index128++) {
+                    var robot = array129[index128];
+                    {
+                        if (unitType !== -1 && robot.unit !== unitType) {
+                            continue;
+                        }
+                        if ((myTeam && (robot.team !== r.me.team)) || (!myTeam && (robot.team === r.me.team))) {
+                            continue;
+                        }
+                        if (robot.x === r.me.x && robot.y === r.me.y) {
+                            continue;
+                        }
+                        if (Math.abs(robot.x - r.me.x) <= 1 && Math.abs(robot.y - r.me.y) <= 1) {
+                            /* add */ (nearby.push(robot) > 0);
+                        }
+                    }
+                }
+            }
+            return nearby;
+        };
+        Utils.getAdjacentUnitDeltas = function (r, unitType, myTeam) {
+            var nearby = Utils.getAdjacentRobots(r, unitType, myTeam);
+            var deltas = ([]);
+            for (var index130 = 0; index130 < nearby.length; index130++) {
+                var robot = nearby[index130];
+                {
+                    /* add */ (deltas.push(new bc19.Point(robot.x - r.me.x, robot.y - r.me.y)) > 0);
+                }
+            }
+            return deltas;
+        };
+        Utils.getRobotsInRange = function (r, unitType, myTeam, minRadiusSq, maxRadiusSq) {
+            var nearby = ([]);
+            {
+                var array132 = r.getVisibleRobots();
+                for (var index131 = 0; index131 < array132.length; index131++) {
+                    var robot = array132[index131];
+                    {
+                        if (unitType !== -1 && robot.unit !== unitType) {
+                            continue;
+                        }
+                        if ((myTeam && (robot.team !== r.me.team)) || (!myTeam && (robot.team === r.me.team))) {
+                            continue;
+                        }
+                        if (robot.x === r.me.x && robot.y === r.me.y) {
+                            continue;
+                        }
+                        var distX = robot.x - r.me.x;
+                        var distY = robot.y - r.me.y;
+                        var distanceSquared = distX * distX + distY * distY;
+                        if (distanceSquared >= minRadiusSq && distanceSquared <= maxRadiusSq) {
+                            /* add */ (nearby.push(robot) > 0);
+                        }
+                    }
+                }
+            }
+            return nearby;
+        };
+        Utils.getUnitDeltasInRange = function (r, unitType, myTeam, minRadiusSq, maxRadiusSq) {
+            var nearby = Utils.getRobotsInRange(r, unitType, myTeam, minRadiusSq, maxRadiusSq);
+            var deltas = ([]);
+            for (var index133 = 0; index133 < nearby.length; index133++) {
+                var robot = nearby[index133];
+                {
+                    /* add */ (deltas.push(new bc19.Point(robot.x - r.me.x, robot.y - r.me.y)) > 0);
+                }
+            }
+            return deltas;
+        };
+        Utils.getRobotSortInRange = function (r, myTeam, minRadiusSq, maxRadiusSq) {
+            var nearby = Utils.getRobotsInRange(r, -1, myTeam, minRadiusSq, maxRadiusSq);
+            var toSort = ([]);
+            for (var index134 = 0; index134 < nearby.length; index134++) {
+                var robot = nearby[index134];
+                {
+                    var distanceSquared = Utils.computeSquareDistance(Utils.myLocation(r), new bc19.Point(robot.x, robot.y));
+                    var rob = new bc19.RobotSort(robot.id, robot.unit, robot.x, robot.y, distanceSquared, robot.health);
+                    /* add */ (toSort.push(rob) > 0);
+                }
+            }
+            /* sort */ toSort.sort();
+            return toSort;
+        };
+        Utils.getAdjacentFreeSpaces = function (r) {
+            var freeSpaces = ([]);
+            var dxes = [-1, 0, 1];
+            var dyes = [-1, 0, 1];
+            for (var index135 = 0; index135 < dxes.length; index135++) {
+                var dx = dxes[index135];
+                {
+                    for (var index136 = 0; index136 < dyes.length; index136++) {
+                        var dy = dyes[index136];
+                        {
+                            var delta = new bc19.Point(dx, dy);
+                            if (Utils.isNearbySpaceEmpty(r, delta)) {
+                                /* add */ (freeSpaces.push(delta) > 0);
+                            }
+                        }
+                    }
+                }
+            }
+            return freeSpaces;
+        };
+        Utils.hasResource = function (r, loc) {
+            return r.karboniteMap[loc.y][loc.x] || r.fuelMap[loc.y][loc.x];
+        };
+        Utils.getAdjacentResourceCount = function (r, p) {
+            var dxes = [-1, 0, 1];
+            var dyes = [-1, 0, 1];
+            var count = 0;
+            for (var index137 = 0; index137 < dxes.length; index137++) {
+                var dx = dxes[index137];
+                {
+                    for (var index138 = 0; index138 < dyes.length; index138++) {
+                        var dy = dyes[index138];
+                        {
+                            if (dx === 0 && dy === 0) {
+                                continue;
+                            }
+                            if (Utils.hasResource(r, new bc19.Point(p.x + dx, p.y + dy))) {
+                                count++;
+                            }
+                        }
+                    }
+                }
+            }
+            return count;
+        };
+        Utils.getMirroredPosition = function (rob, position) {
+            var passableMap = rob.getPassableMap();
+            var ht = passableMap.length;
+            var wid = passableMap[0].length;
+            var locX = position.x;
+            var locY = position.y;
+            if (Utils.symmetryType === 0) {
+                var verticalSymmetry = true;
+                for (var c = 0; c < wid; c++) {
+                    for (var r = 0; r < (ht / 2 | 0) + 1; r++) {
+                        if (passableMap[r][c] !== passableMap[ht - r - 1][c]) {
+                            verticalSymmetry = false;
+                            break;
+                        }
+                    }
+                    ;
+                }
+                ;
+                Utils.symmetryType = verticalSymmetry ? 2 : 1;
+            }
+            if (Utils.symmetryType === 2) {
+                return new bc19.Point(locX, ht - locY - 1);
+            }
+            else if (Utils.symmetryType === 1) {
+                return new bc19.Point(wid - locX - 1, locY);
+            }
+            else {
+                rob.log("No symmetry set! This is bad.");
+            }
+            return null;
+        };
+        Utils.computeSquareDistance = function (p1, p2) {
+            return (p1.x - p2.x) * (p1.x - p2.x) + (p1.y - p2.y) * (p1.y - p2.y);
+        };
+        Utils.computeEuclideanDistance = function (p1, p2) {
+            return Math.sqrt(Utils.computeSquareDistance(p1, p2));
+        };
+        Utils.computeManhattanDistance = function (p1, p2) {
+            return Math.abs(p1.x - p2.x) + Math.abs(p1.y - p2.y);
+        };
+        Utils.getLocation = function (r) {
+            return new bc19.Point(r.x, r.y);
+        };
+        Utils.myLocation = function (r) {
+            return new bc19.Point(r.me.x, r.me.y);
+        };
+        Utils.generateRingLocations = function (r, castle, enemyCastle) {
+            var ringLocations = ({});
+            var passableMap = r.getPassableMap();
+            for (var y = 0; y < passableMap.length; y++) {
+                for (var x = 0; x < passableMap[y].length; x++) {
+                    if (!passableMap[y][x] || !Utils.isBetween(castle, enemyCastle, new bc19.Point(x, y))) {
+                        continue;
+                    }
+                    var dx = x - castle.x;
+                    var dy = y - castle.y;
+                    var distance = (Math.sqrt(dx * dx + dy * dy) | 0);
+                    if (!(function (m, k) { if (m.entries == null)
+                        m.entries = []; for (var i = 0; i < m.entries.length; i++)
+                        if (m.entries[i].key.equals != null && m.entries[i].key.equals(k) || m.entries[i].key === k) {
+                            return true;
+                        } return false; })(ringLocations, distance)) {
+                        /* put */ (function (m, k, v) { if (m.entries == null)
+                            m.entries = []; for (var i = 0; i < m.entries.length; i++)
+                            if (m.entries[i].key.equals != null && m.entries[i].key.equals(k) || m.entries[i].key === k) {
+                                m.entries[i].value = v;
+                                return;
+                            } m.entries.push({ key: k, value: v, getKey: function () { return this.key; }, getValue: function () { return this.value; } }); })(ringLocations, distance, []);
+                    }
+                    /* add */ ((function (m, k) { if (m.entries == null)
+                        m.entries = []; for (var i = 0; i < m.entries.length; i++)
+                        if (m.entries[i].key.equals != null && m.entries[i].key.equals(k) || m.entries[i].key === k) {
+                            return m.entries[i].value;
+                        } return null; })(ringLocations, distance).push(new bc19.Point(x, y)) > 0);
+                }
+                ;
+            }
+            ;
+            return ringLocations;
+        };
+        Utils.getSpawningCastleOrChurchLocation = function (r) {
+            var initialCastleDeltas = Utils.getAdjacentUnitDeltas(r, r.SPECS.CASTLE, true);
+            /* addAll */ (function (l1, l2) { return l1.push.apply(l1, l2); })(initialCastleDeltas, Utils.getAdjacentUnitDeltas(r, r.SPECS.CHURCH, true));
+            if (initialCastleDeltas.length > 0) {
+                var initialCastleDelta = initialCastleDeltas[0];
+                return new bc19.Point(r.me.x + initialCastleDelta.x, r.me.y + initialCastleDelta.y);
+            }
+            return null;
+        };
+        Utils.getFuelPoints = function (r) {
+            var fuelMap = r.getFuelMap();
+            var targets = ([]);
+            for (var y = 0; y < fuelMap.length; y++) {
+                for (var x = 0; x < fuelMap[y].length; x++) {
+                    if (fuelMap[y][x]) {
+                        /* add */ (targets.push(new bc19.Point(x, y)) > 0);
+                    }
+                }
+                ;
+            }
+            ;
+            return targets;
+        };
+        Utils.getKarbonitePoints = function (r) {
+            var karboniteMap = r.getKarboniteMap();
+            var targets = ([]);
+            for (var y = 0; y < karboniteMap.length; y++) {
+                for (var x = 0; x < karboniteMap[y].length; x++) {
+                    if (karboniteMap[y][x]) {
+                        /* add */ (targets.push(new bc19.Point(x, y)) > 0);
+                    }
+                }
+                ;
+            }
+            ;
+            return targets;
+        };
+        Utils.getContestedKarboniteGuardPoint = function (r) {
+            var karb = Utils.getKarbonitePoints(r);
+            var myLoc = Utils.myLocation(r);
+            var enemyLoc = Utils.getMirroredPosition(r, myLoc);
+            var smallestDiff = 100000;
+            var bestPoint = null;
+            for (var index139 = 0; index139 < karb.length; index139++) {
+                var loc = karb[index139];
+                {
+                    var dist1 = Utils.computeManhattanDistance(myLoc, loc);
+                    var dist2 = Utils.computeManhattanDistance(enemyLoc, loc);
+                    var diff = Math.abs(dist1 - dist2) * 100 + dist1;
+                    if (diff < smallestDiff) {
+                        smallestDiff = diff;
+                        bestPoint = loc;
+                    }
+                }
+            }
+            var passableMap = r.getPassableMap();
+            var finalPoint = new bc19.Point(bestPoint.x, bestPoint.y);
+            for (var dx = -1; dx <= 1; dx++) {
+                for (var dy = -1; dy <= 1; dy++) {
+                    if (!(dx === 0 && dy === 0)) {
+                        if (passableMap[bestPoint.x + dx][bestPoint.y + dy]) {
+                            finalPoint.x = bestPoint.x + dx;
+                            finalPoint.y = bestPoint.y + dy;
+                        }
+                    }
+                }
+                ;
+            }
+            ;
+            r.log("Contested karb location is " + finalPoint.x + " " + finalPoint.y);
+            return finalPoint;
+        };
+        Utils.getClusterLocations = function (candidates) {
+            var consumed = ({});
+            var clusters = ([]);
+            var index = 0;
+            while (((function (m) { if (m.entries == null)
+                m.entries = []; return m.entries.length; })(consumed) < candidates.length)) {
+                while (((function (m, k) { if (m.entries == null)
+                    m.entries = []; for (var i = 0; i < m.entries.length; i++)
+                    if (m.entries[i].key.equals != null && m.entries[i].key.equals(k) || m.entries[i].key === k) {
+                        return true;
+                    } return false; })(consumed, index))) {
+                    index++;
+                }
+                ;
+                var centroid = candidates[index];
+                /* add */ (clusters.push(centroid) > 0);
+                /* put */ (function (m, k, v) { if (m.entries == null)
+                    m.entries = []; for (var i = 0; i < m.entries.length; i++)
+                    if (m.entries[i].key.equals != null && m.entries[i].key.equals(k) || m.entries[i].key === k) {
+                        m.entries[i].value = v;
+                        return;
+                    } m.entries.push({ key: k, value: v, getKey: function () { return this.key; }, getValue: function () { return this.value; } }); })(consumed, index, 0);
+                for (var i = index; i < candidates.length; i++) {
+                    var other = candidates[i];
+                    if (Utils.computeEuclideanDistance(centroid, other) < bc19.Constants.MIN_CHURCH_BUILD_DISTANCE) {
+                        /* put */ (function (m, k, v) { if (m.entries == null)
+                            m.entries = []; for (var i_1 = 0; i_1 < m.entries.length; i_1++)
+                            if (m.entries[i_1].key.equals != null && m.entries[i_1].key.equals(k) || m.entries[i_1].key === k) {
+                                m.entries[i_1].value = v;
+                                return;
+                            } m.entries.push({ key: k, value: v, getKey: function () { return this.key; }, getValue: function () { return this.value; } }); })(consumed, i, 0);
+                    }
+                }
+                ;
+            }
+            ;
+            return clusters;
+        };
+        Utils.getNonResourceSpotAround = function (r, point) {
+            var dxes = [-1, 0, 1];
+            var dyes = [-1, 0, 1];
+            var passable = r.getPassableMap();
+            var karb = r.getKarboniteMap();
+            var fuel = r.getFuelMap();
+            for (var index140 = 0; index140 < dxes.length; index140++) {
+                var dx = dxes[index140];
+                {
+                    for (var index141 = 0; index141 < dyes.length; index141++) {
+                        var dy = dyes[index141];
+                        {
+                            var absolute = new bc19.Point(point.x + dx, point.y + dy);
+                            var x = absolute.x;
+                            var y = absolute.y;
+                            if (x < 0 || y < 0 || y >= passable.length || y >= passable[0].length) {
+                                continue;
+                            }
+                            if (passable[y][x] && !karb[y][x] && !fuel[y][x]) {
+                                return absolute;
+                            }
+                        }
+                    }
+                }
+            }
+            return null;
+        };
+        return Utils;
+    }());
+    Utils.symmetryType = 0;
+    bc19.Utils = Utils;
+    Utils["__class"] = "bc19.Utils";
+})(bc19 || (bc19 = {}));
+(function (bc19) {
+    var Action = (function () {
+        function Action(signal, signalRadius, logs, castleTalk) {
+            this.signal = 0;
+            this.signal_radius = 0;
+            this.logs = null;
+            this.castle_talk = 0;
+            this.signal = signal;
+            this.signal_radius = signalRadius;
+            this.logs = logs;
+            this.castle_talk = castleTalk;
+        }
+        return Action;
+    }());
+    bc19.Action = Action;
+    Action["__class"] = "bc19.Action";
+})(bc19 || (bc19 = {}));
+(function (bc19) {
+    var Pilgrim = (function () {
+        function Pilgrim() {
+        }
+        Pilgrim.knownTargets_$LI$ = function () { if (Pilgrim.knownTargets == null)
+            Pilgrim.knownTargets = ({}); return Pilgrim.knownTargets; };
+        ;
+        Pilgrim.state_$LI$ = function () { if (Pilgrim.state == null)
+            Pilgrim.state = Pilgrim.State.GATHERING; return Pilgrim.state; };
+        ;
+        Pilgrim.computeCastleMap = function (r) {
+            var targets = ([]);
+            {
+                var array143 = r.getVisibleRobots();
+                for (var index142 = 0; index142 < array143.length; index142++) {
+                    var robot = array143[index142];
+                    {
+                        if (robot.unit === r.SPECS.CASTLE || robot.unit === r.SPECS.CHURCH) {
+                            var target = new bc19.Point(robot.x, robot.y);
+                            /* add */ (targets.push(target) > 0);
+                            /* put */ (function (m, k, v) { if (m.entries == null)
+                                m.entries = []; for (var i = 0; i < m.entries.length; i++)
+                                if (m.entries[i].key.equals != null && m.entries[i].key.equals(k) || m.entries[i].key === k) {
+                                    m.entries[i].value = v;
+                                    return;
+                                } m.entries.push({ key: k, value: v, getKey: function () { return this.key; }, getValue: function () { return this.value; } }); })(Pilgrim.knownTargets_$LI$(), target, 0);
+                        }
+                    }
+                }
+            }
+            Pilgrim.castleMap = new bc19.Navigation(r, r.getPassableMap(), targets);
+        };
+        Pilgrim.recalculateChurchAndCastleMapIfNecessary = function (r) {
+            var foundNewChurchOrCastle = false;
+            var nearbyCastles = bc19.Utils.getRobotsInRange(r, r.SPECS.CASTLE, true, 0, bc19.Utils.mySpecs(r).VISION_RADIUS);
+            for (var index144 = 0; index144 < nearbyCastles.length; index144++) {
+                var rob = nearbyCastles[index144];
+                {
+                    if (!(function (m, k) { if (m.entries == null)
+                        m.entries = []; for (var i = 0; i < m.entries.length; i++)
+                        if (m.entries[i].key.equals != null && m.entries[i].key.equals(k) || m.entries[i].key === k) {
+                            return true;
+                        } return false; })(Pilgrim.knownTargets_$LI$(), bc19.Utils.getLocation(rob))) {
+                        /* put */ (function (m, k, v) { if (m.entries == null)
+                            m.entries = []; for (var i = 0; i < m.entries.length; i++)
+                            if (m.entries[i].key.equals != null && m.entries[i].key.equals(k) || m.entries[i].key === k) {
+                                m.entries[i].value = v;
+                                return;
+                            } m.entries.push({ key: k, value: v, getKey: function () { return this.key; }, getValue: function () { return this.value; } }); })(Pilgrim.knownTargets_$LI$(), bc19.Utils.getLocation(rob), 0);
+                        Pilgrim.castleMap.addTarget(bc19.Utils.getLocation(rob));
+                        foundNewChurchOrCastle = true;
+                    }
+                }
+            }
+            var nearbyChurches = bc19.Utils.getRobotsInRange(r, r.SPECS.CHURCH, true, 0, bc19.Utils.mySpecs(r).VISION_RADIUS);
+            for (var index145 = 0; index145 < nearbyChurches.length; index145++) {
+                var rob = nearbyChurches[index145];
+                {
+                    if (!(function (m, k) { if (m.entries == null)
+                        m.entries = []; for (var i = 0; i < m.entries.length; i++)
+                        if (m.entries[i].key.equals != null && m.entries[i].key.equals(k) || m.entries[i].key === k) {
+                            return true;
+                        } return false; })(Pilgrim.knownTargets_$LI$(), bc19.Utils.getLocation(rob))) {
+                        /* put */ (function (m, k, v) { if (m.entries == null)
+                            m.entries = []; for (var i = 0; i < m.entries.length; i++)
+                            if (m.entries[i].key.equals != null && m.entries[i].key.equals(k) || m.entries[i].key === k) {
+                                m.entries[i].value = v;
+                                return;
+                            } m.entries.push({ key: k, value: v, getKey: function () { return this.key; }, getValue: function () { return this.value; } }); })(Pilgrim.knownTargets_$LI$(), bc19.Utils.getLocation(rob), 0);
+                        Pilgrim.castleMap.addTarget(bc19.Utils.getLocation(rob));
+                        foundNewChurchOrCastle = true;
+                    }
+                }
+            }
+            if (foundNewChurchOrCastle) {
+                r.log("Found new church or castle, so recalculating distance map.");
+                Pilgrim.castleMap.recalculateDistanceMap();
+            }
+        };
+        Pilgrim.invalidateCastleOrChurchIfNecessary = function (r) {
+            if (Pilgrim.castleMap.getPotential(bc19.Utils.myLocation(r)) === 0) {
+                Pilgrim.castleMap.removeTarget(bc19.Utils.myLocation(r));
+                r.log("Invalidated church or castle, so recalculating distance map.");
+                Pilgrim.castleMap.recalculateDistanceMap();
+            }
+        };
+        Pilgrim.shouldExecuteLocalLeader = function (r) {
+            return Pilgrim.castleMap.getPotential(bc19.Utils.myLocation(r)) > bc19.Constants.MIN_CHURCH_BUILD_DISTANCE;
+        };
+        Pilgrim.localLeader = function (r) {
+            {
+                var array147 = bc19.Utils.getRobotsInRange(r, r.SPECS.PILGRIM, true, 0, bc19.Constants.MIN_CHURCH_BUILD_DISTANCE * bc19.Constants.MIN_CHURCH_BUILD_DISTANCE);
+                for (var index146 = 0; index146 < array147.length; index146++) {
+                    var rob = array147[index146];
+                    {
+                        if (rob.id > r.id) {
+                            return false;
+                        }
+                    }
+                }
+            }
+            return true;
+        };
+        Pilgrim.act = function (r) {
+            if (r.__turn === 1) {
+                var adjacentCastles = bc19.Utils.getAdjacentRobots(r, r.SPECS.CASTLE, true);
+                var target = bc19.CommunicationUtils.getPilgrimTargetInfo(r, /* get */ adjacentCastles[0]);
+                var targets = ([]);
+                /* add */ (targets.push(target) > 0);
+                r.log("My target is " + target.x + " " + target.y);
+                Pilgrim.targetMap = new bc19.Navigation(r, r.getPassableMap(), targets);
+                bc19.CommunicationUtils.sendPilgrimInfoToCastle(r, target, 5);
+                Pilgrim.computeCastleMap(r);
+                Pilgrim.state = Pilgrim.State.GATHERING;
+            }
+            Pilgrim.recalculateChurchAndCastleMapIfNecessary(r);
+            if (Pilgrim.state_$LI$() === Pilgrim.State.GATHERING) {
+                if (Pilgrim.targetMap.getPotential(bc19.Utils.myLocation(r)) === 0) {
+                    if (bc19.Utils.canBuild(r, r.SPECS.CHURCH) && Pilgrim.castleMap.getPotential(bc19.Utils.myLocation(r)) > bc19.Constants.MIN_CHURCH_BUILD_DISTANCE) {
+                        var buildAction = bc19.Utils.tryAndBuildChurch(r);
+                        if (buildAction != null) {
+                            bc19.CastleTalkUtils.sendPilgrimDoneBuildingChurch(r);
+                            return buildAction;
+                        }
+                    }
+                    if (r.me.karbonite < bc19.Utils.mySpecs(r).KARBONITE_CAPACITY && r.me.fuel < bc19.Utils.mySpecs(r).FUEL_CAPACITY) {
+                        if (bc19.Utils.canMine(r)) {
+                            return r.mine();
+                        }
+                    }
+                    else {
+                        if (!(Pilgrim.shouldExecuteLocalLeader(r) && Pilgrim.localLeader(r))) {
+                            Pilgrim.state = Pilgrim.State.MOVING_RESOURCE_HOME;
+                            return Pilgrim.act(r);
+                        }
+                    }
+                }
+                else {
+                    return bc19.Utils.moveDijkstra(r, Pilgrim.targetMap, 2);
+                }
+            }
+            if (Pilgrim.state_$LI$() === Pilgrim.State.MOVING_RESOURCE_HOME) {
+                Pilgrim.invalidateCastleOrChurchIfNecessary(r);
+                var adjacentPlacesToDeposit = bc19.Utils.getAdjacentUnitDeltas(r, r.SPECS.CASTLE, true);
+                /* addAll */ (function (l1, l2) { return l1.push.apply(l1, l2); })(adjacentPlacesToDeposit, bc19.Utils.getAdjacentUnitDeltas(r, r.SPECS.CHURCH, true));
+                if (adjacentPlacesToDeposit.length > 0) {
+                    if (r.me.karbonite > 0 || r.me.fuel > 0) {
+                        var adjacentDeposit = adjacentPlacesToDeposit[0];
+                        return r.give(adjacentDeposit.x, adjacentDeposit.y, r.me.karbonite, r.me.fuel);
+                    }
+                    else {
+                        Pilgrim.state = Pilgrim.State.GATHERING;
+                        return Pilgrim.act(r);
+                    }
+                }
+                else {
+                    return bc19.Utils.moveDijkstra(r, Pilgrim.castleMap, 2);
+                }
+            }
+            return null;
+        };
+        return Pilgrim;
+    }());
+    Pilgrim.targetMap = null;
+    Pilgrim.castleMap = null;
+    bc19.Pilgrim = Pilgrim;
+    Pilgrim["__class"] = "bc19.Pilgrim";
+    (function (Pilgrim) {
+        var State;
+        (function (State) {
+            State[State["GATHERING"] = 0] = "GATHERING";
+            State[State["MOVING_RESOURCE_HOME"] = 1] = "MOVING_RESOURCE_HOME";
+        })(State = Pilgrim.State || (Pilgrim.State = {}));
+    })(Pilgrim = bc19.Pilgrim || (bc19.Pilgrim = {}));
+})(bc19 || (bc19 = {}));
+(function (bc19) {
+    var CastleTalkUtils = (function () {
+        function CastleTalkUtils() {
+        }
+        CastleTalkUtils.CASTLE_LOCATION_COMMUNICATION_MASK_$LI$ = function () { if (CastleTalkUtils.CASTLE_LOCATION_COMMUNICATION_MASK == null)
+            CastleTalkUtils.CASTLE_LOCATION_COMMUNICATION_MASK = ((3 << CastleTalkUtils.ARGUMENT_SIZE_BITS) | 0); return CastleTalkUtils.CASTLE_LOCATION_COMMUNICATION_MASK; };
+        ;
+        CastleTalkUtils.ENEMY_CASTLE_KILLED_MASK_$LI$ = function () { if (CastleTalkUtils.ENEMY_CASTLE_KILLED_MASK == null)
+            CastleTalkUtils.ENEMY_CASTLE_KILLED_MASK = ((2 << CastleTalkUtils.ARGUMENT_SIZE_BITS) | 0); return CastleTalkUtils.ENEMY_CASTLE_KILLED_MASK; };
+        ;
+        CastleTalkUtils.FRIENDLY_PILGRIM_SPAWNED_MASK_$LI$ = function () { if (CastleTalkUtils.FRIENDLY_PILGRIM_SPAWNED_MASK == null)
+            CastleTalkUtils.FRIENDLY_PILGRIM_SPAWNED_MASK = ((1) | 0); return CastleTalkUtils.FRIENDLY_PILGRIM_SPAWNED_MASK; };
+        ;
+        CastleTalkUtils.DONE_BUILDING_CHURCH_MASK_$LI$ = function () { if (CastleTalkUtils.DONE_BUILDING_CHURCH_MASK == null)
+            CastleTalkUtils.DONE_BUILDING_CHURCH_MASK = ((2) | 0); return CastleTalkUtils.DONE_BUILDING_CHURCH_MASK; };
+        ;
+        /*private*/ CastleTalkUtils.sendCastleTalk = function (r, message) {
+            r.castleTalk(message);
+        };
+        /*private*/ CastleTalkUtils.instructionMatches = function (instructionMask, castleTalk) {
+            return instructionMask >>> CastleTalkUtils.ARGUMENT_SIZE_BITS === ((castleTalk | 0)) >>> CastleTalkUtils.ARGUMENT_SIZE_BITS;
+        };
+        CastleTalkUtils.getCastleCoord = function (r, other) {
+            if (CastleTalkUtils.instructionMatches(CastleTalkUtils.CASTLE_LOCATION_COMMUNICATION_MASK_$LI$(), other.castle_talk)) {
+                return other.castle_talk % (1 << CastleTalkUtils.ARGUMENT_SIZE_BITS);
+            }
+            return -1;
+        };
+        CastleTalkUtils.sendCastleCoord = function (r, coordinate) {
+            var message = ((CastleTalkUtils.CASTLE_LOCATION_COMMUNICATION_MASK_$LI$() | ((coordinate | 0))) | 0);
+            CastleTalkUtils.sendCastleTalk(r, message);
+        };
+        CastleTalkUtils.enemyCastleKilled = function (r, other) {
+            return CastleTalkUtils.instructionMatches(CastleTalkUtils.ENEMY_CASTLE_KILLED_MASK_$LI$(), other.castle_talk);
+        };
+        CastleTalkUtils.enemyCastleKilledLocationMatches = function (r, other, position) {
+            return (position.x ^ position.y) === (other.castle_talk % (1 << CastleTalkUtils.ARGUMENT_SIZE_BITS));
+        };
+        CastleTalkUtils.sendEnemyCastleKilled = function (r, enemyCastleLocation) {
+            var message = ((CastleTalkUtils.ENEMY_CASTLE_KILLED_MASK_$LI$() | (((enemyCastleLocation.x ^ enemyCastleLocation.y) | 0))) | 0);
+            CastleTalkUtils.sendCastleTalk(r, message);
+        };
+        CastleTalkUtils.sendFriendlyPilgrimSpawned = function (r) {
+            CastleTalkUtils.sendCastleTalk(r, CastleTalkUtils.FRIENDLY_PILGRIM_SPAWNED_MASK_$LI$());
+        };
+        CastleTalkUtils.friendlyPilgrimSpawned = function (r, other) {
+            return ((other.castle_talk | 0)) === CastleTalkUtils.FRIENDLY_PILGRIM_SPAWNED_MASK_$LI$();
+        };
+        CastleTalkUtils.invalidate = function (r) {
+            CastleTalkUtils.sendCastleTalk(r, (0 | 0));
+        };
+        CastleTalkUtils.sendPilgrimDoneBuildingChurch = function (r) {
+            CastleTalkUtils.sendCastleTalk(r, CastleTalkUtils.DONE_BUILDING_CHURCH_MASK_$LI$());
+        };
+        CastleTalkUtils.pilgrimDoneBuildingChurch = function (r, other) {
+            return ((other.castle_talk | 0) === CastleTalkUtils.DONE_BUILDING_CHURCH_MASK_$LI$());
+        };
+        return CastleTalkUtils;
+    }());
+    CastleTalkUtils.INSTRUCTION_SIZE_BITS = 2;
+    CastleTalkUtils.ARGUMENT_SIZE_BITS = 6;
+    bc19.CastleTalkUtils = CastleTalkUtils;
+    CastleTalkUtils["__class"] = "bc19.CastleTalkUtils";
+})(bc19 || (bc19 = {}));
+(function (bc19) {
+    var BCException = (function (_super) {
+        __extends(BCException, _super);
+        function BCException(errorMessage) {
+            var _this = _super.call(this, errorMessage) || this;
+            _this.message = errorMessage;
+            Object.setPrototypeOf(_this, BCException.prototype);
+            return _this;
+        }
+        return BCException;
+    }(Error));
+    bc19.BCException = BCException;
+    BCException["__class"] = "bc19.BCException";
+    BCException["__interfaces"] = ["java.io.Serializable"];
+})(bc19 || (bc19 = {}));
+(function (bc19) {
+    var Ring = (function () {
+        function Ring() {
+        }
+        Ring.ring_$LI$ = function () { if (Ring.ring == null)
+            Ring.ring = Ring.RING_START; return Ring.ring; };
+        ;
+        /*private*/ Ring.pickRingTarget = function (r) {
+            if (!(function (m, k) { if (m.entries == null)
+                m.entries = []; for (var i = 0; i < m.entries.length; i++)
+                if (m.entries[i].key.equals != null && m.entries[i].key.equals(k) || m.entries[i].key === k) {
+                    return true;
+                } return false; })(Ring.ringLocations, Ring.ring_$LI$())) {
+                return null;
+            }
+            var pointsInRing = (function (m, k) { if (m.entries == null)
+                m.entries = []; for (var i = 0; i < m.entries.length; i++)
+                if (m.entries[i].key.equals != null && m.entries[i].key.equals(k) || m.entries[i].key === k) {
+                    return m.entries[i].value;
+                } return null; })(Ring.ringLocations, Ring.ring_$LI$());
+            if (Ring.ring_$LI$() > Ring.RING_START) {
+                return bc19.Utils.findClosestPointManhattan(r, pointsInRing);
+            }
+            else {
+                return pointsInRing[((Math.random() * pointsInRing.length) | 0)];
+            }
+        };
+        Ring.exceededMaxRingLevel = function () {
+            return Ring.ring_$LI$() >= Ring.MAX_RING_LEVEL;
+        };
+        Ring.ringFormation = function (r, initialCastleLocation, enemyCastleLocation) {
+            if (Ring.ringLocations == null) {
+                Ring.ringLocations = bc19.Utils.generateRingLocations(r, initialCastleLocation, enemyCastleLocation);
+            }
+            if (bc19.CommunicationUtils.receivedBumpMessage(r) && bc19.Utils.isOn(r, Ring.ringTarget)) {
+                bc19.Ring.ring_$LI$();
+                Ring.ring++;
+                if (Ring.exceededMaxRingLevel()) {
+                    return null;
+                }
+                Ring.ringTarget = null;
+            }
+            if (Ring.ringTarget == null) {
+                Ring.ringTarget = Ring.pickRingTarget(r);
+                if (Ring.ringTarget == null) {
+                    return null;
+                }
+                var targets = ([]);
+                /* add */ (targets.push(Ring.ringTarget) > 0);
+                Ring.ringMap = new bc19.Navigation(r, r.getPassableMap(), targets);
+            }
+            var visibleMap = r.getVisibleRobotMap();
+            if (bc19.Utils.isAdjacentOrOn(r, Ring.ringTarget) && !bc19.Utils.isOn(r, Ring.ringTarget) && visibleMap[Ring.ringTarget.y][Ring.ringTarget.x] > 0) {
+                bc19.CommunicationUtils.sendBumpMessage(r, r.getVisibleRobotMap()[Ring.ringTarget.y][Ring.ringTarget.x]);
+                return null;
+            }
+            if (!bc19.Utils.isOn(r, Ring.ringTarget) && Ring.ringMap != null) {
+                return bc19.Utils.moveDijkstra(r, Ring.ringMap, 1);
+            }
+            return null;
+        };
+        return Ring;
+    }());
+    Ring.RING_START = 4;
+    Ring.MAX_RING_LEVEL = 35;
+    Ring.ringMap = null;
+    Ring.ringLocations = null;
+    Ring.ringTarget = null;
+    bc19.Ring = Ring;
+    Ring["__class"] = "bc19.Ring";
+})(bc19 || (bc19 = {}));
+(function (bc19) {
+    var Point = (function () {
+        function Point(x, y) {
+            this.x = 0;
+            this.y = 0;
+            this.x = x;
+            this.y = y;
+        }
+        Point.prototype.getX = function () {
+            return this.x;
+        };
+        Point.prototype.getY = function () {
+            return this.y;
+        };
+        /**
+         *
+         * @param {bc19.Point} point
+         * @return {number}
+         */
+        Point.prototype.compareTo = function (point) {
+            if (this.x > point.x) {
+                return 1;
+            }
+            if (this.x < point.x) {
+                return -1;
+            }
+            return this.y - point.y;
+        };
+        Point.prototype.equals = function (obj) {
+            if (!(obj != null && obj instanceof bc19.Point)) {
+                return false;
+            }
+            var point = obj;
+            return (this.x === point.x) && (this.y === point.y);
+        };
+        Point.prototype.hashCode = function () {
+            var hash = 7;
+            hash = 71 * hash + this.x;
+            hash = 71 * hash + this.y;
+            return hash;
+        };
+        Point.prototype.toString = function () {
+            return "(" + this.x + ", " + this.y + ")";
+        };
+        return Point;
+    }());
+    bc19.Point = Point;
+    Point["__class"] = "bc19.Point";
+    Point["__interfaces"] = ["java.lang.Comparable"];
+})(bc19 || (bc19 = {}));
+(function (bc19) {
+    /**
+     * Created by patil215 on 1/18/19.
+     * @class
+     */
+    var Preacher = (function () {
+        function Preacher() {
+        }
+        Preacher.act = function (r) {
+            return null;
+        };
+        return Preacher;
+    }());
+    bc19.Preacher = Preacher;
+    Preacher["__class"] = "bc19.Preacher";
+})(bc19 || (bc19 = {}));
+(function (bc19) {
+    var BCAbstractRobot = (function () {
+        function BCAbstractRobot() {
+            this.SPECS = null;
+            this.gameState = null;
+            this.logs = null;
+            this.__signal = 0;
+            this.signalRadius = 0;
+            this.__castleTalk = 0;
+            this.me = null;
+            this.id = 0;
+            this.fuel = 0;
+            this.karbonite = 0;
+            this.lastOffer = null;
+            this.map = null;
+            this.karboniteMap = null;
+            this.fuelMap = null;
+            this.resetState();
+        }
+        BCAbstractRobot.prototype.setSpecs = function (specs) {
+            this.SPECS = specs;
+        };
+        /*private*/ BCAbstractRobot.prototype.resetState = function () {
+            this.logs = ([]);
+            this.__signal = 0;
+            this.signalRadius = 0;
+            this.__castleTalk = 0;
+        };
+        BCAbstractRobot.prototype._do_turn = function (gameState) {
+            this.gameState = gameState;
+            this.id = gameState.id;
+            this.karbonite = gameState.karbonite;
+            this.fuel = gameState.fuel;
+            this.lastOffer = gameState.last_offer;
+            this.me = this.getRobot(this.id);
+            if (this.me.turn === 1) {
+                this.map = gameState.map;
+                this.karboniteMap = gameState.karbonite_map;
+                this.fuelMap = gameState.fuel_map;
+            }
+            var t = null;
+            try {
+                t = this.turn();
+            }
+            catch (e) {
+                t = new bc19.ErrorAction(e, this.__signal, this.signalRadius, this.logs, this.__castleTalk);
+            }
+            ;
+            if (t == null)
+                t = new bc19.Action(this.__signal, this.signalRadius, this.logs, this.__castleTalk);
+            t.signal = this.__signal;
+            t.signal_radius = this.signalRadius;
+            t.logs = this.logs;
+            t.castle_talk = this.__castleTalk;
+            this.resetState();
+            return t;
+        };
+        /*private*/ BCAbstractRobot.prototype.checkOnMap = function (x, y) {
+            return x >= 0 && x < this.gameState.shadow[0].length && y >= 0 && y < this.gameState.shadow.length;
+        };
+        BCAbstractRobot.prototype.log = function (message) {
+            /* add */ (this.logs.push(message) > 0);
+        };
+        BCAbstractRobot.prototype.signal = function (value, radius) {
+            var fuelNeeded = (Math.ceil(Math.sqrt(radius)) | 0);
+            if (this.fuel < fuelNeeded)
+                throw new bc19.BCException("Not enough fuel to signal given radius.");
+            if (value < 0 || value >= Math.pow(2, this.SPECS.COMMUNICATION_BITS))
+                throw new bc19.BCException("Invalid signal, must be within bit range.");
+            if (radius > 2 * Math.pow(this.SPECS.MAX_BOARD_SIZE - 1, 2))
+                throw new bc19.BCException("Signal radius is too big.");
+            this.__signal = value;
+            this.signalRadius = radius;
+            this.fuel -= fuelNeeded;
+        };
+        BCAbstractRobot.prototype.castleTalk = function (value) {
+            if (value < 0 || value >= Math.pow(2, this.SPECS.CASTLE_TALK_BITS))
+                throw new bc19.BCException("Invalid castle talk, must be between 0 and 2^8.");
+            this.__castleTalk = value;
+        };
+        BCAbstractRobot.prototype.proposeTrade = function (k, f) {
+            if (this.me.unit !== this.SPECS.CASTLE)
+                throw new bc19.BCException("Only castles can trade.");
+            if (Math.abs(k) >= this.SPECS.MAX_TRADE || Math.abs(f) >= this.SPECS.MAX_TRADE)
+                throw new bc19.BCException("Cannot trade over " + ('' + (this.SPECS.MAX_TRADE)) + " in a given turn.");
+            return new bc19.TradeAction(f, k, this.__signal, this.signalRadius, this.logs, this.__castleTalk);
+        };
+        BCAbstractRobot.prototype.buildUnit = function (unit, dx, dy) {
+            if (this.me.unit !== this.SPECS.PILGRIM && this.me.unit !== this.SPECS.CASTLE && this.me.unit !== this.SPECS.CHURCH)
+                throw new bc19.BCException("This unit type cannot build.");
+            if (this.me.unit === this.SPECS.PILGRIM && unit !== this.SPECS.CHURCH)
+                throw new bc19.BCException("Pilgrims can only build churches.");
+            if (this.me.unit !== this.SPECS.PILGRIM && unit === this.SPECS.CHURCH)
+                throw new bc19.BCException("Only pilgrims can build churches.");
+            if (dx < -1 || dy < -1 || dx > 1 || dy > 1)
+                throw new bc19.BCException("Can only build in adjacent squares.");
+            if (!this.checkOnMap(this.me.x + dx, this.me.y + dy))
+                throw new bc19.BCException("Can\'t build units off of map.");
+            if (this.gameState.shadow[this.me.y + dy][this.me.x + dx] !== 0)
+                throw new bc19.BCException("Cannot build on occupied tile.");
+            if (!this.map[this.me.y + dy][this.me.x + dx])
+                throw new bc19.BCException("Cannot build onto impassable terrain.");
+            if (this.karbonite < this.SPECS.UNITS[unit].CONSTRUCTION_KARBONITE || this.fuel < this.SPECS.UNITS[unit].CONSTRUCTION_FUEL)
+                throw new bc19.BCException("Cannot afford to build specified unit.");
+            return new bc19.BuildAction(unit, dx, dy, this.__signal, this.signalRadius, this.logs, this.__castleTalk);
+        };
+        BCAbstractRobot.prototype.move = function (dx, dy) {
+            if (this.me.unit === this.SPECS.CASTLE || this.me.unit === this.SPECS.CHURCH)
+                throw new bc19.BCException("Churches and Castles cannot move.");
+            if (!this.checkOnMap(this.me.x + dx, this.me.y + dy))
+                throw new bc19.BCException("Can\'t move off of map.");
+            if (this.gameState.shadow[this.me.y + dy][this.me.x + dx] === -1)
+                throw new bc19.BCException("Cannot move outside of vision range.");
+            if (this.gameState.shadow[this.me.y + dy][this.me.x + dx] !== 0)
+                throw new bc19.BCException("Cannot move onto occupied tile.");
+            if (!this.map[this.me.y + dy][this.me.x + dx])
+                throw new bc19.BCException("Cannot move onto impassable terrain.");
+            var r = dx * dx + dy * dy;
+            if (r > this.SPECS.UNITS[this.me.unit].SPEED)
+                throw new bc19.BCException("Slow down, cowboy.  Tried to move faster than unit can.");
+            if (this.fuel < r * this.SPECS.UNITS[this.me.unit].FUEL_PER_MOVE)
+                throw new bc19.BCException("Not enough fuel to move at given speed.");
+            return new bc19.MoveAction(dx, dy, this.__signal, this.signalRadius, this.logs, this.__castleTalk);
+        };
+        BCAbstractRobot.prototype.mine = function () {
+            if (this.me.unit !== this.SPECS.PILGRIM)
+                throw new bc19.BCException("Only Pilgrims can mine.");
+            if (this.fuel < this.SPECS.MINE_FUEL_COST)
+                throw new bc19.BCException("Not enough fuel to mine.");
+            if (this.karboniteMap[this.me.y][this.me.x]) {
+                if (this.me.karbonite >= this.SPECS.UNITS[this.SPECS.PILGRIM].KARBONITE_CAPACITY)
+                    throw new bc19.BCException("Cannot mine, as at karbonite capacity.");
+            }
+            else if (this.fuelMap[this.me.y][this.me.x]) {
+                if (this.me.fuel >= this.SPECS.UNITS[this.SPECS.PILGRIM].FUEL_CAPACITY)
+                    throw new bc19.BCException("Cannot mine, as at fuel capacity.");
+            }
+            else
+                throw new bc19.BCException("Cannot mine square without fuel or karbonite.");
+            return new bc19.MineAction(this.__signal, this.signalRadius, this.logs, this.__castleTalk);
+        };
+        BCAbstractRobot.prototype.give = function (dx, dy, k, f) {
+            if (dx > 1 || dx < -1 || dy > 1 || dy < -1 || (dx === 0 && dy === 0))
+                throw new bc19.BCException("Can only give to adjacent squares.");
+            if (!this.checkOnMap(this.me.x + dx, this.me.y + dy))
+                throw new bc19.BCException("Can\'t give off of map.");
+            if (this.gameState.shadow[this.me.y + dy][this.me.x + dx] <= 0)
+                throw new bc19.BCException("Cannot give to empty square.");
+            if (k < 0 || f < 0 || this.me.karbonite < k || this.me.fuel < f)
+                throw new bc19.BCException("Do not have specified amount to give.");
+            return new bc19.GiveAction(k, f, dx, dy, this.__signal, this.signalRadius, this.logs, this.__castleTalk);
+        };
+        BCAbstractRobot.prototype.attack = function (dx, dy) {
+            if (this.me.unit === this.SPECS.CHURCH)
+                throw new bc19.BCException("Churches cannot attack.");
+            if (this.fuel < this.SPECS.UNITS[this.me.unit].ATTACK_FUEL_COST)
+                throw new bc19.BCException("Not enough fuel to attack.");
+            if (!this.checkOnMap(this.me.x + dx, this.me.y + dy))
+                throw new bc19.BCException("Can\'t attack off of map.");
+            if (this.gameState.shadow[this.me.y + dy][this.me.x + dx] === -1)
+                throw new bc19.BCException("Cannot attack outside of vision range.");
+            var r = dx * dx + dy * dy;
+            if (r > this.SPECS.UNITS[this.me.unit].ATTACK_RADIUS[1] || r < this.SPECS.UNITS[this.me.unit].ATTACK_RADIUS[0])
+                throw new bc19.BCException("Cannot attack outside of attack range.");
+            return new bc19.AttackAction(dx, dy, this.__signal, this.signalRadius, this.logs, this.__castleTalk);
+        };
+        BCAbstractRobot.prototype.getRobot = function (id) {
+            if (id <= 0)
+                return null;
+            for (var i = 0; i < this.gameState.visible.length; i++) {
+                if (this.gameState.visible[i].id === id) {
+                    return this.gameState.visible[i];
+                }
+            }
+            ;
+            return null;
+        };
+        BCAbstractRobot.prototype.isVisible = function (robot) {
+            for (var x = 0; x < this.gameState.shadow[0].length; x++) {
+                for (var y = 0; y < this.gameState.shadow.length; y++) {
+                    if (robot.id === this.gameState.shadow[y][x])
+                        return true;
+                }
+                ;
+            }
+            ;
+            return false;
+        };
+        BCAbstractRobot.prototype.isRadioing = function (robot) {
+            return robot.signal >= 0;
+        };
+        BCAbstractRobot.prototype.getVisibleRobotMap = function () {
+            return this.gameState.shadow;
+        };
+        BCAbstractRobot.prototype.getPassableMap = function () {
+            return this.map;
+        };
+        BCAbstractRobot.prototype.getKarboniteMap = function () {
+            return this.karboniteMap;
+        };
+        BCAbstractRobot.prototype.getFuelMap = function () {
+            return this.fuelMap;
+        };
+        BCAbstractRobot.prototype.getVisibleRobots = function () {
+            return this.gameState.visible;
+        };
+        BCAbstractRobot.prototype.turn = function () {
+            return null;
+        };
+        return BCAbstractRobot;
+    }());
+    bc19.BCAbstractRobot = BCAbstractRobot;
+    BCAbstractRobot["__class"] = "bc19.BCAbstractRobot";
+})(bc19 || (bc19 = {}));
+(function (bc19) {
+    /**
+     * Created by patil215 on 1/18/19.
+     * @class
+     */
+    var Constants = (function () {
+        function Constants() {
+        }
+        Constants.TURNS_BEFORE_DONE_RECEIVING_ENEMY_CASTLE_LOCATIONS_$LI$ = function () { if (Constants.TURNS_BEFORE_DONE_RECEIVING_ENEMY_CASTLE_LOCATIONS == null)
+            Constants.TURNS_BEFORE_DONE_RECEIVING_ENEMY_CASTLE_LOCATIONS = Constants.MAX_NUM_CASTLES - 1; return Constants.TURNS_BEFORE_DONE_RECEIVING_ENEMY_CASTLE_LOCATIONS; };
+        ;
+        return Constants;
+    }());
+    Constants.CASTLE_ATTACK_RADIUS_SQ = 64;
+    Constants.PILGRIM_MINE_FUEL_COST = 1;
+    Constants.CASTLE = 0;
+    Constants.CHURCH = 1;
+    Constants.PILGRIM = 2;
+    Constants.CRUSADER = 3;
+    Constants.PROPHET = 4;
+    Constants.PREACHER = 5;
+    Constants.MAX_INT = 9999999;
+    Constants.CRUSADER_FUEL_PER_MOVE = 1;
+    Constants.PILGRIM_FUEL_PER_MOVE = 1;
+    Constants.PROPHET_FUEL_PER_MOVE = 2;
+    Constants.PREACHER_FUEL_PER_MOVE = 3;
+    Constants.CASTLE_SPAM_CRUSADERS_TURN_THRESHOLD = 800;
+    Constants.CASTLE_CREATE_COMBAT_PROPHETS_TURN_THRESHOLD = 2;
+    Constants.CRUSADER_ATTACK_RADIUS = 4;
+    Constants.NUM_AGGRESSIVE_SCOUT_UNITS_TO_BUILD = 1;
+    Constants.MAX_NUM_CASTLES = 3;
+    Constants.FUEL_CAP_TURN_THRESHOLD = 700;
+    Constants.FUEL_CAP = 400;
+    Constants.MIN_CHURCH_BUILD_DISTANCE = 4;
+    Constants.ENEMY_RESOURCE_PENETRATION_PERCENTAGE = 1.2;
+    Constants.ATTACK_TURN = 800;
+    bc19.Constants = Constants;
+    Constants["__class"] = "bc19.Constants";
+})(bc19 || (bc19 = {}));
+(function (bc19) {
+    var Church = (function () {
+        function Church() {
+        }
+        Church.act = function (r) {
+            var numEnemyPilgrims = bc19.Utils.getRobotsInRange(r, r.SPECS.PILGRIM, false, 0, 1000).length;
+            var numFriendlyProphets = bc19.Utils.getRobotsInRange(r, r.SPECS.PROPHET, true, 0, 1000).length;
+            if (numEnemyPilgrims > 0 && numFriendlyProphets < 1) {
+                return bc19.Utils.tryAndBuildInOptimalSpace(r, r.SPECS.PROPHET);
+            }
+            return null;
+        };
+        return Church;
+    }());
+    bc19.Church = Church;
+    Church["__class"] = "bc19.Church";
+})(bc19 || (bc19 = {}));
+(function (bc19) {
+    var KarbFuelTargetQueue = (function () {
+        function KarbFuelTargetQueue(r, otherCastleLocations, enemyCastleLocations) {
+            /*private*/ this.allCastlePilgrimBuildLocations = ([]);
+            /*private*/ this.karbQueue = null;
+            /*private*/ this.fuelQueue = null;
+            /*private*/ this.counter = 0;
+            /*private*/ this.mostContestedPoint = null;
+            var castleIdToResourceMap = ({});
+            {
+                var array149 = (function (m) { var r = []; if (m.entries == null)
+                    m.entries = []; for (var i = 0; i < m.entries.length; i++)
+                    r.push(m.entries[i].key); return r; })(otherCastleLocations);
+                for (var index148 = 0; index148 < array149.length; index148++) {
+                    var id = array149[index148];
+                    {
+                        var targets = ([]);
+                        /* add */ (targets.push(/* get */ (function (m, k) { if (m.entries == null)
+                            m.entries = []; for (var i = 0; i < m.entries.length; i++)
+                            if (m.entries[i].key.equals != null && m.entries[i].key.equals(k) || m.entries[i].key === k) {
+                                return m.entries[i].value;
+                            } return null; })(otherCastleLocations, id)) > 0);
+                        var map = new bc19.Navigation(r, r.getPassableMap(), targets);
+                        /* put */ (function (m, k, v) { if (m.entries == null)
+                            m.entries = []; for (var i = 0; i < m.entries.length; i++)
+                            if (m.entries[i].key.equals != null && m.entries[i].key.equals(k) || m.entries[i].key === k) {
+                                m.entries[i].value = v;
+                                return;
+                            } m.entries.push({ key: k, value: v, getKey: function () { return this.key; }, getValue: function () { return this.value; } }); })(castleIdToResourceMap, id, map);
+                    }
+                }
+            }
+            var enemyTargets = ([]);
+            for (var index150 = 0; index150 < enemyCastleLocations.length; index150++) {
+                var point = enemyCastleLocations[index150];
+                {
+                    /* add */ (enemyTargets.push(point) > 0);
+                }
+            }
+            var enemyMap = new bc19.Navigation(r, r.getPassableMap(), enemyTargets);
+            var myPosition = ([]);
+            /* add */ (myPosition.push(bc19.Utils.myLocation(r)) > 0);
+            var myMap = new bc19.Navigation(r, r.getPassableMap(), myPosition);
+            /* put */ (function (m, k, v) { if (m.entries == null)
+                m.entries = []; for (var i = 0; i < m.entries.length; i++)
+                if (m.entries[i].key.equals != null && m.entries[i].key.equals(k) || m.entries[i].key === k) {
+                    m.entries[i].value = v;
+                    return;
+                } m.entries.push({ key: k, value: v, getKey: function () { return this.key; }, getValue: function () { return this.value; } }); })(castleIdToResourceMap, r.me.id, myMap);
+            var karbLocationsToConsider = bc19.Utils.getKarbonitePoints(r);
+            var fuelLocationsToConsider = bc19.Utils.getFuelPoints(r);
+            this.fuelQueue = this.computeResourceQueue(r, castleIdToResourceMap, enemyMap, fuelLocationsToConsider);
+            this.karbQueue = this.computeResourceQueue(r, castleIdToResourceMap, enemyMap, karbLocationsToConsider);
+        }
+        /*private*/ KarbFuelTargetQueue.prototype.computeResourceQueue = function (r, castleIdToResourceMap, enemyMap, locationsToConsider) {
+            var toReturn = new bc19.PriorityQueue();
+            var smallestContestedSpread = 1000000000;
+            for (var index151 = 0; index151 < locationsToConsider.length; index151++) {
+                var point = locationsToConsider[index151];
+                {
+                    var smallestId = -1;
+                    var smallestValue = 1000000;
+                    var multiplier = 5153;
+                    {
+                        var array153 = (function (m) { var r = []; if (m.entries == null)
+                            m.entries = []; for (var i = 0; i < m.entries.length; i++)
+                            r.push(m.entries[i].key); return r; })(castleIdToResourceMap);
+                        for (var index152 = 0; index152 < array153.length; index152++) {
+                            var id = array153[index152];
+                            {
+                                var map = (function (m, k) { if (m.entries == null)
+                                    m.entries = []; for (var i = 0; i < m.entries.length; i++)
+                                    if (m.entries[i].key.equals != null && m.entries[i].key.equals(k) || m.entries[i].key === k) {
+                                        return m.entries[i].value;
+                                    } return null; })(castleIdToResourceMap, id);
+                                var value = map.getPotential(point) * multiplier + (id % multiplier);
+                                if (value < smallestValue) {
+                                    smallestId = id;
+                                    smallestValue = value;
+                                }
+                            }
+                        }
+                    }
+                    var enemyComp = enemyMap.getPotential(point) * multiplier * bc19.Constants.ENEMY_RESOURCE_PENETRATION_PERCENTAGE;
+                    if (enemyComp < smallestValue) {
+                        continue;
+                    }
+                    /* add */ (this.allCastlePilgrimBuildLocations.push(point) > 0);
+                    if (smallestId === r.me.id) {
+                        toReturn.enqueue(new bc19.Node(smallestValue, point));
+                        var spread = enemyComp - smallestValue;
+                        if (spread < smallestContestedSpread) {
+                            smallestContestedSpread = spread;
+                            this.mostContestedPoint = point;
+                        }
+                    }
+                    else {
+                        toReturn.enqueue(new bc19.Node(smallestValue, new bc19.Point(-1, smallestId)));
+                    }
+                }
+            }
+            return toReturn;
+        };
+        KarbFuelTargetQueue.prototype.getMostContestedPoint = function () {
+            return this.mostContestedPoint;
+        };
+        KarbFuelTargetQueue.prototype.dequeue = function () {
+            var n;
+            if (!this.karbQueue.isEmpty() && (this.counter % 3 < 2 || this.fuelQueue.isEmpty())) {
+                n = this.karbQueue.dequeue();
+            }
+            else {
+                n = this.fuelQueue.dequeue();
+            }
+            this.counter++;
+            if (n == null) {
+                return null;
+            }
+            return n.p;
+        };
+        KarbFuelTargetQueue.prototype.isEmpty = function () {
+            return this.karbQueue.isEmpty() && this.fuelQueue.isEmpty();
+        };
+        KarbFuelTargetQueue.prototype.peek = function () {
+            var n;
+            if (!this.karbQueue.isEmpty() && (this.counter % 3 < 2 || this.fuelQueue.isEmpty())) {
+                n = this.karbQueue.peek();
+            }
+            else {
+                n = this.fuelQueue.peek();
+            }
+            if (n == null) {
+                return null;
+            }
+            return n.p;
+        };
+        KarbFuelTargetQueue.prototype.getAllCastlePilgrimBuildLocations = function () {
+            return this.allCastlePilgrimBuildLocations;
+        };
+        return KarbFuelTargetQueue;
+    }());
+    bc19.KarbFuelTargetQueue = KarbFuelTargetQueue;
+    KarbFuelTargetQueue["__class"] = "bc19.KarbFuelTargetQueue";
+})(bc19 || (bc19 = {}));
+(function (bc19) {
+    var Queue = (function () {
+        function Queue() {
+            this.total = 0;
+            this.first = null;
+            this.last = null;
+        }
+        Queue.prototype.enqueue = function (ele) {
+            var current = this.last;
+            this.last = new Queue.Node(this);
+            this.last.ele = ele;
+            if (this.total++ === 0)
+                this.first = this.last;
+            else
+                current.next = this.last;
+            return this;
+        };
+        Queue.prototype.dequeue = function () {
+            if (this.total === 0)
+                throw Object.defineProperty(new Error(), '__classes', { configurable: true, value: ['java.lang.Throwable', 'java.lang.Object', 'java.lang.RuntimeException', 'java.util.NoSuchElementException', 'java.lang.Exception'] });
+            var ele = this.first.ele;
+            this.first = this.first.next;
+            if (--this.total === 0)
+                this.last = null;
+            return ele;
+        };
+        Queue.prototype.isEmpty = function () {
+            return this.total === 0;
+        };
+        /**
+         *
+         * @return {string}
+         */
+        Queue.prototype.toString = function () {
+            var sb = { str: "", toString: function () { return this.str; } };
+            var tmp = this.first;
+            while ((tmp != null)) {
+                /* append */ (function (sb) { sb.str = sb.str.concat(", "); return sb; })(/* append */ (function (sb) { sb.str = sb.str.concat(tmp.ele); return sb; })(sb));
+                tmp = tmp.next;
+            }
+            ;
+            return sb.str;
+        };
+        return Queue;
+    }());
+    bc19.Queue = Queue;
+    Queue["__class"] = "bc19.Queue";
+    (function (Queue) {
+        var Node = (function () {
+            function Node(__parent) {
+                this.__parent = __parent;
+                this.ele = null;
+                this.next = null;
+            }
+            return Node;
+        }());
+        Queue.Node = Node;
+        Node["__class"] = "bc19.Queue.Node";
+    })(Queue = bc19.Queue || (bc19.Queue = {}));
+})(bc19 || (bc19 = {}));
+(function (bc19) {
+    var Node = (function () {
+        function Node(dist, p) {
+            this.dist = 0;
+            this.p = null;
+            this.dist = dist;
+            this.p = p;
+        }
+        Node.prototype.compareTo = function (o) {
+            return this.dist - o.dist;
+        };
+        return Node;
+    }());
+    bc19.Node = Node;
+    Node["__class"] = "bc19.Node";
+    Node["__interfaces"] = ["java.lang.Comparable"];
+    var PriorityQueue = (function () {
+        function PriorityQueue() {
+            this.heap = null;
+            this.heap = ([]);
+        }
+        PriorityQueue.prototype.size = function () {
+            return this.heap.length;
+        };
+        PriorityQueue.prototype.isEmpty = function () {
+            return this.size() === 0;
+        };
+        PriorityQueue.prototype.enqueue = function (value) {
+            var sz = this.size();
+            /* add */ (this.heap.push(value) > 0);
+            this.up(this.size() - 1);
+        };
+        PriorityQueue.prototype.dequeue = function () {
+            var sz = this.size();
+            if (sz === 0) {
+                throw Object.defineProperty(new Error(), '__classes', { configurable: true, value: ['java.lang.Throwable', 'java.lang.IndexOutOfBoundsException', 'java.lang.Object', 'java.lang.ArrayIndexOutOfBoundsException', 'java.lang.RuntimeException', 'java.lang.Exception'] });
+            }
+            var last = this.heap[this.heap.length - 1];
+            /* remove */ this.heap.splice(/* size */ this.heap.length - 1, 1);
+            if (this.heap.length > 0) {
+                var ret = this.heap[0];
+                /* set */ (this.heap[0] = last);
+                this.down(0);
+                return ret;
+            }
+            return last;
+        };
+        PriorityQueue.prototype.peek = function () {
+            if (this.size() === 0) {
+                return null;
+            }
+            else {
+                return this.heap[0];
+            }
+        };
+        PriorityQueue.prototype.delete = function (p) {
+            if (this.heap.length === 0) {
+                return false;
+            }
+            for (var i = 0; i < this.heap.length; i++) {
+                if (p.x === this.heap[i].p.x && p.y === this.heap[i].p.y) {
+                    if (this.heap.length - 1 === i) {
+                        /* remove */ this.heap.splice(i, 1);
+                    }
+                    else {
+                        /* set */ (this.heap[i] = this.heap[this.heap.length - 1]);
+                        this.down(i);
+                        this.up(i);
+                    }
+                    return true;
+                }
+            }
+            ;
+            return false;
+        };
+        /*private*/ PriorityQueue.prototype.lt = function (t1, t2) {
+            return t1.compareTo(t2) < 0;
+        };
+        /*private*/ PriorityQueue.prototype.gt = function (t1, t2) {
+            return t1.compareTo(t2) > 0;
+        };
+        /*private*/ PriorityQueue.prototype.up = function (index) {
+            if (index === 0) {
+                return;
+            }
+            var elt = this.heap[index];
+            var parIndex = ((index - 1) / 2 | 0);
+            var par = this.heap[parIndex];
+            if (this.lt(elt, par)) {
+                /* set */ (this.heap[index] = par);
+                /* set */ (this.heap[parIndex] = elt);
+                this.up(parIndex);
+            }
+        };
+        /*private*/ PriorityQueue.prototype.down = function (parIndex) {
+            var par = this.heap[parIndex];
+            var c1Index = 2 * parIndex + 1;
+            var c2Index = 2 * parIndex + 2;
+            if (c1Index >= this.heap.length) {
+                return;
+            }
+            var c1 = this.heap[c1Index];
+            if (c2Index >= this.heap.length) {
+                if (this.gt(par, c1)) {
+                    /* set */ (this.heap[parIndex] = c1);
+                    /* set */ (this.heap[c1Index] = par);
+                }
+                return;
+            }
+            var c2 = this.heap[c2Index];
+            if (this.gt(par, c1) || this.gt(par, c2)) {
+                if (this.lt(c1, c2)) {
+                    /* set */ (this.heap[parIndex] = c1);
+                    /* set */ (this.heap[c1Index] = par);
+                    this.down(c1Index);
+                }
+                else {
+                    /* set */ (this.heap[parIndex] = c2);
+                    /* set */ (this.heap[c2Index] = par);
+                    this.down(c2Index);
+                }
+            }
+        };
+        return PriorityQueue;
+    }());
+    bc19.PriorityQueue = PriorityQueue;
+    PriorityQueue["__class"] = "bc19.PriorityQueue";
+})(bc19 || (bc19 = {}));
+(function (bc19) {
+    var Prophet = (function () {
+        function Prophet() {
+        }
+        Prophet.state_$LI$ = function () { if (Prophet.state == null)
+            Prophet.state = Prophet.State.TURTLING; return Prophet.state; };
+        ;
+        Prophet.otherEnemyCastleLocations_$LI$ = function () { if (Prophet.otherEnemyCastleLocations == null)
+            Prophet.otherEnemyCastleLocations = ({}); return Prophet.otherEnemyCastleLocations; };
+        ;
+        Prophet.beginAttack = function (r) {
+            if (Math.random() < 0.5) {
+                bc19.CommunicationUtils.sendAttackMessage(r);
+            }
+            Prophet.state = Prophet.State.ATTACKING;
+            return Prophet.act(r);
+        };
+        Prophet.computeEnemyCastlesMap = function (r) {
+            var targets = ([]);
+            /* add */ (targets.push(Prophet.enemyCastleLocation) > 0);
+            {
+                var array155 = (function (m) { var r = []; if (m.entries == null)
+                    m.entries = []; for (var i = 0; i < m.entries.length; i++)
+                    r.push(m.entries[i].key); return r; })(Prophet.otherEnemyCastleLocations_$LI$());
+                for (var index154 = 0; index154 < array155.length; index154++) {
+                    var location_1 = array155[index154];
+                    {
+                        /* add */ (targets.push(location_1) > 0);
+                    }
+                }
+            }
+            Prophet.enemyCastleMap = new bc19.Navigation(r, r.getPassableMap(), targets);
+        };
+        Prophet.getEnemyCastleLocations = function (r) {
+            {
+                var array157 = bc19.Utils.getAdjacentRobots(r, r.SPECS.CASTLE, true);
+                for (var index156 = 0; index156 < array157.length; index156++) {
+                    var robot = array157[index156];
+                    {
+                        if (bc19.CommunicationUtils.receivedEnemyCastleLocation(r, robot)) {
+                            var location_2 = bc19.CommunicationUtils.getEnemyCastleLocation(r, robot);
+                            /* put */ (function (m, k, v) { if (m.entries == null)
+                                m.entries = []; for (var i = 0; i < m.entries.length; i++)
+                                if (m.entries[i].key.equals != null && m.entries[i].key.equals(k) || m.entries[i].key === k) {
+                                    m.entries[i].value = v;
+                                    return;
+                                } m.entries.push({ key: k, value: v, getKey: function () { return this.key; }, getValue: function () { return this.value; } }); })(Prophet.otherEnemyCastleLocations_$LI$(), location_2, 0);
+                        }
+                    }
+                }
+            }
+        };
+        Prophet.invalidateEnemyCastleTargetsIfNecessary = function (r) {
+            if (Prophet.enemyCastleMap == null) {
+                return;
+            }
+            var targets = Prophet.enemyCastleMap.getTargets();
+            var myLoc = bc19.Utils.myLocation(r);
+            for (var index158 = 0; index158 < targets.length; index158++) {
+                var target = targets[index158];
+                {
+                    if (bc19.Utils.computeSquareDistance(target, myLoc) > bc19.Utils.mySpecs(r).VISION_RADIUS) {
+                        continue;
+                    }
+                    var foundCastle = false;
+                    {
+                        var array160 = bc19.Utils.getRobotsInRange(r, r.SPECS.CASTLE, false, 0, 10000);
+                        for (var index159 = 0; index159 < array160.length; index159++) {
+                            var robot = array160[index159];
+                            {
+                                if (bc19.Utils.getLocation(robot).equals(target)) {
+                                    foundCastle = true;
+                                }
+                            }
+                        }
+                    }
+                    if (!foundCastle) {
+                        Prophet.enemyCastleMap.removeTarget(target);
+                        r.log("Enemy castle is dead, so recalculating distance map.");
+                        Prophet.enemyCastleMap.recalculateDistanceMap();
+                        bc19.CastleTalkUtils.sendEnemyCastleKilled(r, target);
+                    }
+                }
+            }
+        };
+        Prophet.doAggressiveScoutInitialization = function (r) {
+            {
+                var array162 = r.getVisibleRobots();
+                for (var index161 = 0; index161 < array162.length; index161++) {
+                    var robot = array162[index161];
+                    {
+                        if (bc19.CommunicationUtils.receivedAggressiveScoutLocation(r, robot)) {
+                            Prophet.isAggressiveScout = true;
+                            var targets = ([]);
+                            /* add */ (targets.push(bc19.CommunicationUtils.getAggressiveScoutLocation(r, robot)) > 0);
+                            Prophet.enemyCastleMap = new bc19.Navigation(r, r.getPassableMap(), targets);
+                            break;
+                        }
+                    }
+                }
+            }
+        };
+        Prophet.doTurtleInitialization = function (r) {
+            {
+                var array164 = r.getVisibleRobots();
+                for (var index163 = 0; index163 < array164.length; index163++) {
+                    var robot = array164[index163];
+                    {
+                        if (bc19.CommunicationUtils.receivedTurtleLocation(r, robot)) {
+                            Prophet.isTurtle = true;
+                            var targets = ([]);
+                            /* add */ (targets.push(bc19.CommunicationUtils.getTurtleLocation(r, robot)) > 0);
+                            Prophet.enemyCastleMap = new bc19.Navigation(r, r.getPassableMap(), targets);
+                            break;
+                        }
+                    }
+                }
+            }
+        };
+        Prophet.doAggressiveScoutActions = function (r) {
+            var attackAction = bc19.Utils.tryAndAttack(r, bc19.Utils.mySpecs(r).ATTACK_RADIUS[1]);
+            if (attackAction != null) {
+                return attackAction;
+            }
+            return bc19.Utils.moveDijkstra(r, Prophet.enemyCastleMap, 2);
+        };
+        Prophet.doTurtleActions = function (r) {
+            var attackAction = bc19.Utils.tryAndAttack(r, bc19.Utils.mySpecs(r).ATTACK_RADIUS[1]);
+            if (attackAction != null) {
+                return attackAction;
+            }
+            return bc19.Utils.moveDijkstra(r, Prophet.enemyCastleMap, 2);
+        };
+        Prophet.act = function (r) {
+            if (r.__turn === 1) {
+                Prophet.initialCastleLocation = bc19.Utils.getSpawningCastleOrChurchLocation(r);
+                Prophet.enemyCastleLocation = bc19.Utils.getMirroredPosition(r, Prophet.initialCastleLocation);
+                Prophet.doAggressiveScoutInitialization(r);
+                Prophet.doTurtleInitialization(r);
+            }
+            if (Prophet.isAggressiveScout) {
+                return Prophet.doAggressiveScoutActions(r);
+            }
+            if (Prophet.isTurtle) {
+                return Prophet.doTurtleActions(r);
+            }
+            if (r.__turn < bc19.Constants.TURNS_BEFORE_DONE_RECEIVING_ENEMY_CASTLE_LOCATIONS_$LI$()) {
+                Prophet.getEnemyCastleLocations(r);
+            }
+            else if (r.__turn === bc19.Constants.TURNS_BEFORE_DONE_RECEIVING_ENEMY_CASTLE_LOCATIONS_$LI$()) {
+                Prophet.computeEnemyCastlesMap(r);
+            }
+            else {
+                Prophet.invalidateEnemyCastleTargetsIfNecessary(r);
+            }
+            var attackAction = bc19.Utils.tryAndAttack(r, bc19.Utils.mySpecs(r).ATTACK_RADIUS[1]);
+            if (attackAction != null) {
+                return attackAction;
+            }
+            if (r.__turn < bc19.Constants.TURNS_BEFORE_DONE_RECEIVING_ENEMY_CASTLE_LOCATIONS_$LI$()) {
+                return null;
+            }
+            if (Prophet.state_$LI$() === Prophet.State.TURTLING) {
+                if (bc19.CommunicationUtils.receivedAttackMessage(r)) {
+                    return Prophet.beginAttack(r);
+                }
+                var ringAction = bc19.Ring.ringFormation(r, Prophet.initialCastleLocation, Prophet.enemyCastleLocation);
+                if (ringAction != null) {
+                    return ringAction;
+                }
+                if (bc19.Ring.exceededMaxRingLevel()) {
+                    return Prophet.beginAttack(r);
+                }
+            }
+            else if (Prophet.state_$LI$() === Prophet.State.ATTACKING) {
+                return bc19.Utils.moveDijkstraThenRandom(r, Prophet.enemyCastleMap, 2);
+            }
+            return null;
+        };
+        return Prophet;
+    }());
+    Prophet.enemyCastleMap = null;
+    Prophet.initialCastleLocation = null;
+    Prophet.enemyCastleLocation = null;
+    Prophet.isAggressiveScout = false;
+    Prophet.isTurtle = false;
+    bc19.Prophet = Prophet;
+    Prophet["__class"] = "bc19.Prophet";
+    (function (Prophet) {
+        var State;
+        (function (State) {
+            State[State["TURTLING"] = 0] = "TURTLING";
+            State[State["ATTACKING"] = 1] = "ATTACKING";
+        })(State = Prophet.State || (Prophet.State = {}));
+    })(Prophet = bc19.Prophet || (bc19.Prophet = {}));
+})(bc19 || (bc19 = {}));
+(function (bc19) {
+    var RobotSort = (function () {
+        function RobotSort(id_, unit_, x_, y_, dist_, hp_) {
+            this.id = 0;
+            this.unit = 0;
+            this.x = 0;
+            this.y = 0;
+            this.dist = 0;
+            this.hp = 0;
+            this.id = id_;
+            this.unit = unit_;
+            this.x = x_;
+            this.y = y_;
+            this.dist = dist_;
+            this.hp = hp_;
+        }
+        RobotSort.getPriority = function (type) {
+            if (type === bc19.Constants.PREACHER)
+                return 0;
+            if (type === bc19.Constants.PROPHET)
+                return 1;
+            if (type === bc19.Constants.CRUSADER)
+                return 2;
+            if (type === bc19.Constants.CASTLE)
+                return 3;
+            if (type === bc19.Constants.CHURCH)
+                return 4;
+            if (type === bc19.Constants.PILGRIM)
+                return 5;
+            return -1;
+        };
+        /**
+         *
+         * @param {bc19.RobotSort} r
+         * @return {number}
+         */
+        RobotSort.prototype.compareTo = function (r) {
+            if (this.unit === r.unit) {
+                if (this.hp === r.hp) {
+                    return this.dist - r.dist;
+                }
+                else {
+                    return this.hp - r.hp;
+                }
+            }
+            else {
+                return RobotSort.getPriority(this.unit) - RobotSort.getPriority(r.unit);
+            }
+        };
+        return RobotSort;
+    }());
+    bc19.RobotSort = RobotSort;
+    RobotSort["__class"] = "bc19.RobotSort";
+    RobotSort["__interfaces"] = ["java.lang.Comparable"];
+})(bc19 || (bc19 = {}));
+(function (bc19) {
+    var CommunicationUtils = (function () {
+        function CommunicationUtils() {
+        }
+        CommunicationUtils.PILGRIM_TARGET_MASK_$LI$ = function () { if (CommunicationUtils.PILGRIM_TARGET_MASK == null)
+            CommunicationUtils.PILGRIM_TARGET_MASK = ((7 << CommunicationUtils.ARGUMENT_SIZE_BITS) | 0); return CommunicationUtils.PILGRIM_TARGET_MASK; };
+        ;
+        CommunicationUtils.TURTLE_MASK_$LI$ = function () { if (CommunicationUtils.TURTLE_MASK == null)
+            CommunicationUtils.TURTLE_MASK = ((6 << CommunicationUtils.ARGUMENT_SIZE_BITS) | 0); return CommunicationUtils.TURTLE_MASK; };
+        ;
+        CommunicationUtils.PROPHET_BUMP_MASK_$LI$ = function () { if (CommunicationUtils.PROPHET_BUMP_MASK == null)
+            CommunicationUtils.PROPHET_BUMP_MASK = ((5 << CommunicationUtils.ARGUMENT_SIZE_BITS) | 0); return CommunicationUtils.PROPHET_BUMP_MASK; };
+        ;
+        CommunicationUtils.PROPHET_ATTACK_MASK_$LI$ = function () { if (CommunicationUtils.PROPHET_ATTACK_MASK == null)
+            CommunicationUtils.PROPHET_ATTACK_MASK = ((4 << CommunicationUtils.ARGUMENT_SIZE_BITS) | 0); return CommunicationUtils.PROPHET_ATTACK_MASK; };
+        ;
+        CommunicationUtils.ENEMY_CASTLE_LOCATION_MASK_$LI$ = function () { if (CommunicationUtils.ENEMY_CASTLE_LOCATION_MASK == null)
+            CommunicationUtils.ENEMY_CASTLE_LOCATION_MASK = ((3 << CommunicationUtils.ARGUMENT_SIZE_BITS) | 0); return CommunicationUtils.ENEMY_CASTLE_LOCATION_MASK; };
+        ;
+        CommunicationUtils.AGGRESSIVE_SCOUT_MASK_$LI$ = function () { if (CommunicationUtils.AGGRESSIVE_SCOUT_MASK == null)
+            CommunicationUtils.AGGRESSIVE_SCOUT_MASK = ((2 << CommunicationUtils.ARGUMENT_SIZE_BITS) | 0); return CommunicationUtils.AGGRESSIVE_SCOUT_MASK; };
+        ;
+        CommunicationUtils.CASTLE_INFORM_MASK_$LI$ = function () { if (CommunicationUtils.CASTLE_INFORM_MASK == null)
+            CommunicationUtils.CASTLE_INFORM_MASK = ((1 << CommunicationUtils.ARGUMENT_SIZE_BITS) | 0); return CommunicationUtils.CASTLE_INFORM_MASK; };
+        ;
+        /*private*/ CommunicationUtils.sendBroadcast = function (r, message, radiusSq) {
+            if (bc19.Utils.canSignal(r, radiusSq)) {
+                r.signal(message, radiusSq);
+                return true;
+            }
+            return false;
+        };
+        /*private*/ CommunicationUtils.instructionMatches = function (instructionMask, signal) {
+            return instructionMask >>> CommunicationUtils.ARGUMENT_SIZE_BITS === ((signal | 0)) >>> CommunicationUtils.ARGUMENT_SIZE_BITS;
+        };
+        /*private*/ CommunicationUtils.argumentMatches = function (argumentMask, signal) {
+            return ((signal % (1 << CommunicationUtils.ARGUMENT_SIZE_BITS)) | 0) === argumentMask;
+        };
+        CommunicationUtils.receivedAggressiveScoutLocation = function (r, other) {
+            return (r.isRadioing(other) && CommunicationUtils.instructionMatches(CommunicationUtils.AGGRESSIVE_SCOUT_MASK_$LI$(), other.signal));
+        };
+        CommunicationUtils.receivedTurtleLocation = function (r, other) {
+            return (r.isRadioing(other) && CommunicationUtils.instructionMatches(CommunicationUtils.TURTLE_MASK_$LI$(), other.signal));
+        };
+        CommunicationUtils.getAggressiveScoutLocation = function (r, other) {
+            if (CommunicationUtils.receivedAggressiveScoutLocation(r, other)) {
+                var message = (other.signal | 0);
+                return new bc19.Point(((message / (64) | 0)) % 64, message % 64);
+            }
+            return null;
+        };
+        CommunicationUtils.getTurtleLocation = function (r, other) {
+            if (CommunicationUtils.receivedTurtleLocation(r, other)) {
+                var message = (other.signal | 0);
+                return new bc19.Point(((message / (64) | 0)) % 64, message % 64);
+            }
+            return null;
+        };
+        CommunicationUtils.sendTurtleLocation = function (r, target) {
+            var message = ((CommunicationUtils.TURTLE_MASK_$LI$() | ((target.x | 0) << 6) | ((target.y | 0))) | 0);
+            return CommunicationUtils.sendBroadcast(r, message, CommunicationUtils.AGGRESSIVE_SCOUT_LOCATION_SQ);
+        };
+        CommunicationUtils.sendAggressiveScoutLocation = function (r, target) {
+            var message = ((CommunicationUtils.AGGRESSIVE_SCOUT_MASK_$LI$() | ((target.x | 0) << 6) | ((target.y | 0))) | 0);
+            return CommunicationUtils.sendBroadcast(r, message, CommunicationUtils.AGGRESSIVE_SCOUT_LOCATION_SQ);
+        };
+        CommunicationUtils.sendEnemyCastleLocation = function (r, target) {
+            var message = ((CommunicationUtils.ENEMY_CASTLE_LOCATION_MASK_$LI$() | ((target.x | 0) << 6) | ((target.y | 0))) | 0);
+            return CommunicationUtils.sendBroadcast(r, message, CommunicationUtils.ENEMY_CASTLE_LOCATION_SQ);
+        };
+        CommunicationUtils.receivedEnemyCastleLocation = function (r, other) {
+            return (r.isRadioing(other) && CommunicationUtils.instructionMatches(CommunicationUtils.ENEMY_CASTLE_LOCATION_MASK_$LI$(), other.signal));
+        };
+        CommunicationUtils.getEnemyCastleLocation = function (r, other) {
+            if (CommunicationUtils.receivedEnemyCastleLocation(r, other)) {
+                var message = (other.signal | 0);
+                return new bc19.Point(((message / (64) | 0)) % 64, message % 64);
+            }
+            return null;
+        };
+        CommunicationUtils.sendAttackMessage = function (r, radiusSq) {
+            if (radiusSq === void 0) { radiusSq = CommunicationUtils.ATTACK_SIGNAL_RADIUS_SQ; }
+            return CommunicationUtils.sendBroadcast(r, CommunicationUtils.PROPHET_ATTACK_MASK_$LI$(), radiusSq);
+        };
+        CommunicationUtils.sendGlobalAttackMessage = function (r) {
+            return CommunicationUtils.sendBroadcast(r, CommunicationUtils.PROPHET_ATTACK_MASK_$LI$(), bc19.Ring.MAX_RING_LEVEL * bc19.Ring.MAX_RING_LEVEL);
+        };
+        CommunicationUtils.receivedAttackMessage = function (r) {
+            {
+                var array166 = r.getVisibleRobots();
+                for (var index165 = 0; index165 < array166.length; index165++) {
+                    var other = array166[index165];
+                    {
+                        if (r.isRadioing(other) && CommunicationUtils.instructionMatches(CommunicationUtils.PROPHET_ATTACK_MASK_$LI$(), (other.signal | 0))) {
+                            return true;
+                        }
+                    }
+                }
+            }
+            return false;
+        };
+        CommunicationUtils.sendBumpMessage = function (r, unitId) {
+            var message = ((CommunicationUtils.PROPHET_BUMP_MASK_$LI$() | ((unitId | 0))) | 0);
+            return CommunicationUtils.sendBroadcast(r, message, CommunicationUtils.BUMP_SIGNAL_RADIUS_SQ);
+        };
+        CommunicationUtils.receivedBumpMessage = function (r) {
+            {
+                var array168 = r.getVisibleRobots();
+                for (var index167 = 0; index167 < array168.length; index167++) {
+                    var other = array168[index167];
+                    {
+                        if (r.isRadioing(other) && CommunicationUtils.instructionMatches(CommunicationUtils.PROPHET_BUMP_MASK_$LI$(), (other.signal | 0))) {
+                            if (CommunicationUtils.argumentMatches((r.id | 0), other.signal)) {
+                                return true;
+                            }
+                        }
+                    }
+                }
+            }
+            return false;
+        };
+        CommunicationUtils.sendPilgrimTargetMessage = function (r, target, radius) {
+            var message = ((CommunicationUtils.PILGRIM_TARGET_MASK_$LI$() | ((target.x | 0) << 6) | ((target.y | 0))) | 0);
+            return CommunicationUtils.sendBroadcast(r, message, radius);
+        };
+        CommunicationUtils.getPilgrimTargetInfo = function (r, other) {
+            if (r.isRadioing(other) && CommunicationUtils.instructionMatches(CommunicationUtils.PILGRIM_TARGET_MASK_$LI$(), other.signal)) {
+                var message = (other.signal | 0);
+                return new bc19.Point(((message / (64) | 0)) % 64, message % 64);
+            }
+            return null;
+        };
+        CommunicationUtils.sendPilgrimInfoToCastle = function (r, target, range) {
+            var message = ((CommunicationUtils.CASTLE_INFORM_MASK_$LI$() | (target.x << 6) | target.y) | 0);
+            CommunicationUtils.sendBroadcast(r, message, range);
+        };
+        CommunicationUtils.getPilgrimTargetForCastle = function (r, other) {
+            if (r.isRadioing(other) && CommunicationUtils.instructionMatches(CommunicationUtils.CASTLE_INFORM_MASK_$LI$(), other.signal)) {
+                var message = (other.signal | 0);
+                return new bc19.Point(((message / (64) | 0)) % 64, message % 64);
+            }
+            return null;
+        };
+        return CommunicationUtils;
+    }());
+    CommunicationUtils.INSTRUCTION_SIZE_BITS = 3;
+    CommunicationUtils.ARGUMENT_SIZE_BITS = 13;
+    CommunicationUtils.PILGRIM_TARGET_RADIUS_SQ = 2;
+    CommunicationUtils.ATTACK_SIGNAL_RADIUS_SQ = 5;
+    CommunicationUtils.BUMP_SIGNAL_RADIUS_SQ = 2;
+    CommunicationUtils.ENEMY_CASTLE_LOCATION_SQ = 2;
+    CommunicationUtils.AGGRESSIVE_SCOUT_LOCATION_SQ = 2;
+    bc19.CommunicationUtils = CommunicationUtils;
+    CommunicationUtils["__class"] = "bc19.CommunicationUtils";
+})(bc19 || (bc19 = {}));
+(function (bc19) {
+    var Navigation = (function () {
+        function Navigation(r, passableMap, targets, maxDistance) {
+            var _this = this;
+            if (((r != null && r instanceof bc19.MyRobot) || r === null) && ((passableMap != null && passableMap instanceof Array && (passableMap.length == 0 || passableMap[0] == null || passableMap[0] instanceof Array)) || passableMap === null) && ((targets != null && (targets instanceof Array)) || targets === null) && ((typeof maxDistance === 'number') || maxDistance === null)) {
+                var __args = Array.prototype.slice.call(arguments);
+                this.r = null;
+                this.passableMap = null;
+                this.targets = null;
+                this.maxDistance = 0;
+                this.distances = null;
+                this.r = null;
+                this.passableMap = null;
+                this.targets = null;
+                this.maxDistance = 0;
+                this.distances = null;
+                (function () {
+                    _this.r = r;
+                    _this.passableMap = passableMap;
+                    _this.maxDistance = maxDistance;
+                    _this.distances = (function (dims) { var allocate = function (dims) { if (dims.length == 0) {
+                        return 0;
+                    }
+                    else {
+                        var array = [];
+                        for (var i = 0; i < dims[0]; i++) {
+                            array.push(allocate(dims.slice(1)));
+                        }
+                        return array;
+                    } }; return allocate(dims); })([passableMap.length, passableMap[0].length]);
+                    _this.targets = targets;
+                    _this.recalculateDistanceMap();
+                })();
+            }
+            else if (((r != null && r instanceof bc19.MyRobot) || r === null) && ((passableMap != null && passableMap instanceof Array && (passableMap.length == 0 || passableMap[0] == null || passableMap[0] instanceof Array)) || passableMap === null) && ((targets != null && (targets instanceof Array)) || targets === null) && maxDistance === undefined) {
+                var __args = Array.prototype.slice.call(arguments);
+                {
+                    var __args_1 = Array.prototype.slice.call(arguments);
+                    var maxDistance_1 = Number.MAX_VALUE;
+                    this.r = null;
+                    this.passableMap = null;
+                    this.targets = null;
+                    this.maxDistance = 0;
+                    this.distances = null;
+                    this.r = null;
+                    this.passableMap = null;
+                    this.targets = null;
+                    this.maxDistance = 0;
+                    this.distances = null;
+                    (function () {
+                        _this.r = r;
+                        _this.passableMap = passableMap;
+                        _this.maxDistance = maxDistance_1;
+                        _this.distances = (function (dims) { var allocate = function (dims) { if (dims.length == 0) {
+                            return 0;
+                        }
+                        else {
+                            var array = [];
+                            for (var i = 0; i < dims[0]; i++) {
+                                array.push(allocate(dims.slice(1)));
+                            }
+                            return array;
+                        } }; return allocate(dims); })([passableMap.length, passableMap[0].length]);
+                        _this.targets = targets;
+                        _this.recalculateDistanceMap();
+                    })();
+                }
+            }
+            else
+                throw new Error('invalid overload');
+        }
+        Navigation.prototype.printDistances = function () {
+            for (var i = 0; i < this.distances.length; i++) {
+                var thing = "";
+                for (var j = 0; j < this.distances[0].length; j++) {
+                    if (this.distances[i][j] < 10000) {
+                        thing += (this.distances[i][j] + " ");
+                    }
+                    else {
+                        thing += "inf";
+                    }
+                }
+                ;
+                this.r.log(thing);
+            }
+            ;
+        };
+        Navigation.prototype.setThreshold = function (threshold) {
+            this.maxDistance = threshold;
+        };
+        /*private*/ Navigation.prototype.getPossibleMovementDeltas = function (maxMovementR) {
+            var deltas = ([]);
+            for (var dx = -maxMovementR; dx <= maxMovementR; dx++) {
+                for (var dy = -maxMovementR; dy <= maxMovementR; dy++) {
+                    if (dx * dx + dy * dy > maxMovementR * maxMovementR) {
+                        continue;
+                    }
+                    /* add */ (deltas.push(new bc19.Point(dx, dy)) > 0);
+                }
+                ;
+            }
+            ;
+            return deltas;
+        };
+        /*private*/ Navigation.prototype.getAdjacentDeltas = function () {
+            var deltas = ([]);
+            var dxes = [-1, 0, 1];
+            var dyes = [-1, 0, 1];
+            for (var index169 = 0; index169 < dxes.length; index169++) {
+                var dx = dxes[index169];
+                {
+                    for (var index170 = 0; index170 < dyes.length; index170++) {
+                        var dy = dyes[index170];
+                        {
+                            /* add */ (deltas.push(new bc19.Point(dx, dy)) > 0);
+                        }
+                    }
+                }
+            }
+            return deltas;
+        };
+        Navigation.prototype.recalculateDistanceMap = function () {
+            var movementDeltas = this.getAdjacentDeltas();
+            for (var i = 0; i < this.distances.length; i++) {
+                for (var j = 0; j < this.distances[0].length; j++) {
+                    this.distances[i][j] = Number.MAX_VALUE;
+                }
+                ;
+            }
+            ;
+            var queue = (new bc19.Queue());
+            for (var index171 = 0; index171 < this.targets.length; index171++) {
+                var target = this.targets[index171];
+                {
+                    this.distances[target.y][target.x] = 0;
+                    queue.enqueue(new bc19.Point(target.x, target.y));
+                }
+            }
+            while ((!queue.isEmpty())) {
+                var loc = queue.dequeue();
+                var curDistance = this.distances[loc.y][loc.x];
+                for (var index172 = 0; index172 < movementDeltas.length; index172++) {
+                    var disp = movementDeltas[index172];
+                    {
+                        var newX = loc.getX() + disp.x;
+                        var newY = loc.getY() + disp.y;
+                        if (newX < 0 || newY < 0 || newY >= this.distances.length || newX >= this.distances[0].length) {
+                            continue;
+                        }
+                        if (!this.passableMap[newY][newX]) {
+                            continue;
+                        }
+                        var newDistance = 1 + curDistance;
+                        if (newDistance >= this.maxDistance) {
+                            continue;
+                        }
+                        if (this.distances[newY][newX] <= newDistance) {
+                            continue;
+                        }
+                        this.distances[newY][newX] = newDistance;
+                        queue.enqueue(new bc19.Point(newX, newY));
+                    }
+                }
+            }
+            ;
+        };
+        /**
+         * Returns a best delta to move according to a start location and radius (not r_squared, just r)
+         * <p>
+         * Tries all possible directions, returning their optimality in sorted order.
+         * <p>
+         * TODO: Uses some sort of heuristic to weight moving quick against using fuel.
+         * <p>
+         * Null is returned if all adjacent squares are 'too far' (over threshold)
+         * or impossible to reach.
+         * @param {number} radius
+         * @return {bc19.Point}
+         */
+        Navigation.prototype.getNextMove = function (radius) {
+            var possibleDeltas = this.getPossibleMovementDeltas(radius);
+            var minDist = Number.MAX_VALUE;
+            var bestDelta = null;
+            var start = new bc19.Point(this.r.me.x, this.r.me.y);
+            for (var index173 = 0; index173 < possibleDeltas.length; index173++) {
+                var delta = possibleDeltas[index173];
+                {
+                    var newX = start.x + delta.x;
+                    var newY = start.y + delta.y;
+                    if ((bc19.Utils.canMove(this.r, delta) || (delta.x === 0 && delta.y === 0)) && this.distances[newY][newX] < minDist) {
+                        bestDelta = delta;
+                        minDist = this.distances[newY][newX];
+                    }
+                }
+            }
+            if (bestDelta.x === 0 && bestDelta.y === 0) {
+                return null;
+            }
+            return bestDelta;
+        };
+        Navigation.prototype.addTarget = function (pos) {
+            /* add */ (this.targets.push(pos) > 0);
+        };
+        Navigation.prototype.removeTarget = function (pos) {
+            /* remove */ (function (a) { return a.splice(a.indexOf(pos), 1); })(this.targets);
+        };
+        Navigation.prototype.clearTargets = function () {
+            /* clear */ (this.targets.length = 0);
+        };
+        Navigation.prototype.getTargets = function () {
+            return this.targets;
+        };
+        Navigation.prototype.getPotential = function (location) {
+            var x = location.x;
+            var y = location.y;
+            if (x >= -1 && y >= -1 && y < this.distances.length && x < this.distances[y].length) {
+                return this.distances[y][x];
+            }
+            return 1000;
+        };
+        return Navigation;
+    }());
+    bc19.Navigation = Navigation;
+    Navigation["__class"] = "bc19.Navigation";
+})(bc19 || (bc19 = {}));
+(function (bc19) {
+    var MineAction = (function (_super) {
+        __extends(MineAction, _super);
+        function MineAction(signal, signalRadius, logs, castleTalk) {
+            var _this = _super.call(this, signal, signalRadius, logs, castleTalk) || this;
+            _this.action = null;
+            _this.action = "mine";
+            return _this;
+        }
+        return MineAction;
+    }(bc19.Action));
+    bc19.MineAction = MineAction;
+    MineAction["__class"] = "bc19.MineAction";
+})(bc19 || (bc19 = {}));
+(function (bc19) {
+    var ErrorAction = (function (_super) {
+        __extends(ErrorAction, _super);
+        function ErrorAction(error, signal, signalRadius, logs, castleTalk) {
+            var _this = _super.call(this, signal, signalRadius, logs, castleTalk) || this;
+            _this.error = null;
+            _this.error = error.message;
+            return _this;
+        }
+        return ErrorAction;
+    }(bc19.Action));
+    bc19.ErrorAction = ErrorAction;
+    ErrorAction["__class"] = "bc19.ErrorAction";
+})(bc19 || (bc19 = {}));
+(function (bc19) {
+    var GiveAction = (function (_super) {
+        __extends(GiveAction, _super);
+        function GiveAction(giveKarbonite, giveFuel, dx, dy, signal, signalRadius, logs, castleTalk) {
+            var _this = _super.call(this, signal, signalRadius, logs, castleTalk) || this;
+            _this.action = null;
+            _this.give_karbonite = 0;
+            _this.give_fuel = 0;
+            _this.dx = 0;
+            _this.dy = 0;
+            _this.action = "give";
+            _this.give_karbonite = giveKarbonite;
+            _this.give_fuel = giveFuel;
+            _this.dx = dx;
+            _this.dy = dy;
+            return _this;
+        }
+        return GiveAction;
+    }(bc19.Action));
+    bc19.GiveAction = GiveAction;
+    GiveAction["__class"] = "bc19.GiveAction";
+})(bc19 || (bc19 = {}));
+(function (bc19) {
+    var BuildAction = (function (_super) {
+        __extends(BuildAction, _super);
+        function BuildAction(buildUnit, dx, dy, signal, signalRadius, logs, castleTalk) {
+            var _this = _super.call(this, signal, signalRadius, logs, castleTalk) || this;
+            _this.action = null;
+            _this.build_unit = 0;
+            _this.dx = 0;
+            _this.dy = 0;
+            _this.action = "build";
+            _this.build_unit = buildUnit;
+            _this.dx = dx;
+            _this.dy = dy;
+            return _this;
+        }
+        return BuildAction;
+    }(bc19.Action));
+    bc19.BuildAction = BuildAction;
+    BuildAction["__class"] = "bc19.BuildAction";
+})(bc19 || (bc19 = {}));
+(function (bc19) {
+    var TradeAction = (function (_super) {
+        __extends(TradeAction, _super);
+        function TradeAction(trade_fuel, trade_karbonite, signal, signalRadius, logs, castleTalk) {
+            var _this = _super.call(this, signal, signalRadius, logs, castleTalk) || this;
+            _this.action = null;
+            _this.trade_fuel = 0;
+            _this.trade_karbonite = 0;
+            _this.action = "trade";
+            _this.trade_fuel = trade_fuel;
+            _this.trade_karbonite = trade_karbonite;
+            return _this;
+        }
+        return TradeAction;
+    }(bc19.Action));
+    bc19.TradeAction = TradeAction;
+    TradeAction["__class"] = "bc19.TradeAction";
+})(bc19 || (bc19 = {}));
+(function (bc19) {
+    var MoveAction = (function (_super) {
+        __extends(MoveAction, _super);
+        function MoveAction(dx, dy, signal, signalRadius, logs, castleTalk) {
+            var _this = _super.call(this, signal, signalRadius, logs, castleTalk) || this;
+            _this.action = null;
+            _this.dx = 0;
+            _this.dy = 0;
+            _this.action = "move";
+            _this.dx = dx;
+            _this.dy = dy;
+            return _this;
+        }
+        return MoveAction;
+    }(bc19.Action));
+    bc19.MoveAction = MoveAction;
+    MoveAction["__class"] = "bc19.MoveAction";
+})(bc19 || (bc19 = {}));
+(function (bc19) {
+    var AttackAction = (function (_super) {
+        __extends(AttackAction, _super);
+        function AttackAction(dx, dy, signal, signalRadius, logs, castleTalk) {
+            var _this = _super.call(this, signal, signalRadius, logs, castleTalk) || this;
+            _this.action = null;
+            _this.dx = 0;
+            _this.dy = 0;
+            _this.action = "attack";
+            _this.dx = dx;
+            _this.dy = dy;
+            return _this;
+        }
+        return AttackAction;
+    }(bc19.Action));
+    bc19.AttackAction = AttackAction;
+    AttackAction["__class"] = "bc19.AttackAction";
+})(bc19 || (bc19 = {}));
+(function (bc19) {
+    var MyRobot = (function (_super) {
+        __extends(MyRobot, _super);
+        function MyRobot() {
+            var _this = _super.call(this) || this;
+            _this.__turn = 0;
+            return _this;
+        }
+        MyRobot.prototype.turn = function () {
+            this.doUnitPreTurnActions();
+            var actionToDo = null;
+            if (this.me.unit === this.SPECS.CASTLE) {
+                actionToDo = bc19.Castle.act(this);
+            }
+            else if (this.me.unit === this.SPECS.PILGRIM) {
+                actionToDo = bc19.Pilgrim.act(this);
+            }
+            else if (this.me.unit === this.SPECS.CHURCH) {
+                actionToDo = bc19.Church.act(this);
+            }
+            else if (this.me.unit === this.SPECS.CRUSADER) {
+                actionToDo = bc19.Crusader.act(this);
+            }
+            else if (this.me.unit === this.SPECS.PROPHET) {
+                actionToDo = bc19.Prophet.act(this);
+            }
+            else if (this.me.unit === this.SPECS.PREACHER) {
+                actionToDo = bc19.Preacher.act(this);
+            }
+            this.doUnitPostTurnActions();
+            return actionToDo;
+        };
+        /*private*/ MyRobot.prototype.doUnitPreTurnActions = function () {
+            this.__turn++;
+        };
+        /*private*/ MyRobot.prototype.doUnitPostTurnActions = function () {
+        };
+        return MyRobot;
+    }(bc19.BCAbstractRobot));
+    bc19.MyRobot = MyRobot;
+    MyRobot["__class"] = "bc19.MyRobot";
+})(bc19 || (bc19 = {}));
+(function (bc19) {
+    var Castle = (function () {
+        function Castle() {
+        }
+        Castle.pilgrimToTarget_$LI$ = function () { if (Castle.pilgrimToTarget == null)
+            Castle.pilgrimToTarget = ({}); return Castle.pilgrimToTarget; };
+        ;
+        Castle.enemyCastleLocationIndex_$LI$ = function () { if (Castle.enemyCastleLocationIndex == null)
+            Castle.enemyCastleLocationIndex = bc19.Constants.MAX_NUM_CASTLES; return Castle.enemyCastleLocationIndex; };
+        ;
+        Castle.otherCastleLocations_$LI$ = function () { if (Castle.otherCastleLocations == null)
+            Castle.otherCastleLocations = ({}); return Castle.otherCastleLocations; };
+        ;
+        Castle.enemyCastleLocations_$LI$ = function () { if (Castle.enemyCastleLocations == null)
+            Castle.enemyCastleLocations = ([]); return Castle.enemyCastleLocations; };
+        ;
+        Castle.latticeLocations_$LI$ = function () { if (Castle.latticeLocations == null)
+            Castle.latticeLocations = ([]); return Castle.latticeLocations; };
+        ;
+        Castle.latticeLocationsCrusader_$LI$ = function () { if (Castle.latticeLocationsCrusader == null)
+            Castle.latticeLocationsCrusader = ([]); return Castle.latticeLocationsCrusader; };
+        ;
+        Castle.pickUnitToBuild = function (r) {
+            var value = Castle.buildTypeTick % Castle.UNIT_TYPE_MODULUS;
+            if (value === 9 && Castle.churchesToAllowBuilding > 0) {
+                return r.SPECS.CHURCH;
+            }
+            if (Castle.pilgrimLocationQueue != null && Castle.pilgrimLocationQueue.isEmpty()) {
+                return r.SPECS.PROPHET;
+            }
+            if (value < 2) {
+                return r.SPECS.PILGRIM;
+            }
+            else if (value < 5) {
+                return r.SPECS.PROPHET;
+            }
+            else if (value < 8) {
+                return r.SPECS.PILGRIM;
+            }
+            else {
+                return r.SPECS.PROPHET;
+            }
+        };
+        Castle.handleCastleLocationMessages = function (r) {
+            if (r.__turn === 1) {
+                bc19.CastleTalkUtils.sendCastleCoord(r, r.me.x);
+            }
+            else if (r.__turn === 2) {
+                {
+                    var array175 = r.getVisibleRobots();
+                    for (var index174 = 0; index174 < array175.length; index174++) {
+                        var robot = array175[index174];
+                        {
+                            var castleCoordX = bc19.CastleTalkUtils.getCastleCoord(r, robot);
+                            if (castleCoordX !== -1) {
+                                /* put */ (function (m, k, v) { if (m.entries == null)
+                                    m.entries = []; for (var i = 0; i < m.entries.length; i++)
+                                    if (m.entries[i].key.equals != null && m.entries[i].key.equals(k) || m.entries[i].key === k) {
+                                        m.entries[i].value = v;
+                                        return;
+                                    } m.entries.push({ key: k, value: v, getKey: function () { return this.key; }, getValue: function () { return this.value; } }); })(Castle.otherCastleLocations_$LI$(), robot.id, new bc19.Point(castleCoordX, 0));
+                            }
+                        }
+                    }
+                }
+                bc19.CastleTalkUtils.sendCastleCoord(r, r.me.x);
+            }
+            else if (r.__turn === 3) {
+                bc19.CastleTalkUtils.sendCastleCoord(r, r.me.y);
+            }
+            else if (r.__turn === 4) {
+                {
+                    var array177 = r.getVisibleRobots();
+                    for (var index176 = 0; index176 < array177.length; index176++) {
+                        var robot = array177[index176];
+                        {
+                            var castleCoordY = bc19.CastleTalkUtils.getCastleCoord(r, robot);
+                            if (castleCoordY !== -1) {
+                                var point = (function (m, k) { if (m.entries == null)
+                                    m.entries = []; for (var i = 0; i < m.entries.length; i++)
+                                    if (m.entries[i].key.equals != null && m.entries[i].key.equals(k) || m.entries[i].key === k) {
+                                        return m.entries[i].value;
+                                    } return null; })(Castle.otherCastleLocations_$LI$(), robot.id);
+                                /* put */ (function (m, k, v) { if (m.entries == null)
+                                    m.entries = []; for (var i = 0; i < m.entries.length; i++)
+                                    if (m.entries[i].key.equals != null && m.entries[i].key.equals(k) || m.entries[i].key === k) {
+                                        m.entries[i].value = v;
+                                        return;
+                                    } m.entries.push({ key: k, value: v, getKey: function () { return this.key; }, getValue: function () { return this.value; } }); })(Castle.otherCastleLocations_$LI$(), robot.id, new bc19.Point(point.x, castleCoordY));
+                            }
+                        }
+                    }
+                }
+                bc19.CastleTalkUtils.sendCastleCoord(r, r.me.y);
+                /* remove */ (function (m, k) { if (m.entries == null)
+                    m.entries = []; for (var i = 0; i < m.entries.length; i++)
+                    if (m.entries[i].key.equals != null && m.entries[i].key.equals(k) || m.entries[i].key === k) {
+                        return m.entries.splice(i, 1)[0];
+                    } })(Castle.otherCastleLocations_$LI$(), r.me.id);
+                /* add */ (Castle.enemyCastleLocations_$LI$().push(bc19.Utils.getMirroredPosition(r, bc19.Utils.myLocation(r))) > 0);
+                {
+                    var array179 = (function (m) { var r = []; if (m.entries == null)
+                        m.entries = []; for (var i = 0; i < m.entries.length; i++)
+                        r.push(m.entries[i].key); return r; })(Castle.otherCastleLocations_$LI$());
+                    for (var index178 = 0; index178 < array179.length; index178++) {
+                        var id = array179[index178];
+                        {
+                            /* add */ (Castle.enemyCastleLocations_$LI$().push(bc19.Utils.getMirroredPosition(r, /* get */ (function (m, k) { if (m.entries == null)
+                                m.entries = []; for (var i = 0; i < m.entries.length; i++)
+                                if (m.entries[i].key.equals != null && m.entries[i].key.equals(k) || m.entries[i].key === k) {
+                                    return m.entries[i].value;
+                                } return null; })(Castle.otherCastleLocations_$LI$(), id))) > 0);
+                        }
+                    }
+                }
+                Castle.initializeLattice(r);
+            }
+            else if (r.__turn === 5) {
+                Castle.pilgrimLocationQueue = new bc19.KarbFuelTargetQueue(r, Castle.otherCastleLocations_$LI$(), Castle.enemyCastleLocations_$LI$());
+                Castle.churchesToAllowBuilding = Castle.computeNumChurchesToAllowBuilding(r, Castle.pilgrimLocationQueue.getAllCastlePilgrimBuildLocations());
+                Castle.mostContestedPoint = Castle.pilgrimLocationQueue.getMostContestedPoint();
+            }
+        };
+        /*private*/ Castle.handleEnemyCastleKilledMessages = function (r) {
+            {
+                var array181 = r.getVisibleRobots();
+                var _loop_1 = function (index180) {
+                    var robot = array181[index180];
+                    {
+                        if (bc19.CastleTalkUtils.enemyCastleKilled(r, robot)) {
+                            var pointToRemove_1 = null;
+                            for (var index182 = 0; index182 < Castle.enemyCastleLocations_$LI$().length; index182++) {
+                                var point = Castle.enemyCastleLocations_$LI$()[index182];
+                                {
+                                    if (bc19.CastleTalkUtils.enemyCastleKilledLocationMatches(r, robot, point)) {
+                                        pointToRemove_1 = point;
+                                    }
+                                }
+                            }
+                            if (pointToRemove_1 != null) {
+                                /* remove */ (function (a) { return a.splice(a.indexOf(pointToRemove_1), 1); })(Castle.enemyCastleLocations_$LI$());
+                            }
+                        }
+                    }
+                };
+                for (var index180 = 0; index180 < array181.length; index180++) {
+                    _loop_1(index180);
+                }
+            }
+        };
+        /*private*/ Castle.broadcastEnemyCastleLocationIfNeeded = function (r) {
+            if (Castle.enemyCastleLocationIndex_$LI$() < Castle.enemyCastleLocations_$LI$().length) {
+                if (bc19.CommunicationUtils.sendEnemyCastleLocation(r, /* get */ Castle.enemyCastleLocations_$LI$()[Castle.enemyCastleLocationIndex_$LI$()])) {
+                    bc19.Castle.enemyCastleLocationIndex_$LI$();
+                    Castle.enemyCastleLocationIndex++;
+                    return true;
+                }
+            }
+            return false;
+        };
+        /*private*/ Castle.handleFriendlyPilgrimSpawnedMessages = function (r) {
+            {
+                var array184 = r.getVisibleRobots();
+                for (var index183 = 0; index183 < array184.length; index183++) {
+                    var robot = array184[index183];
+                    {
+                        if (robot.id === r.me.id) {
+                            continue;
+                        }
+                        if (bc19.CastleTalkUtils.friendlyPilgrimSpawned(r, robot)) {
+                            var removed = Castle.pilgrimLocationQueue.dequeue();
+                            if (removed.x !== -1) {
+                                r.log("Popped one of our own locations! This should not happen.");
+                            }
+                        }
+                    }
+                }
+            }
+        };
+        /*private*/ Castle.handleCastleTalk = function (r) {
+            Castle.handleCastleLocationMessages(r);
+            Castle.handleEnemyCastleKilledMessages(r);
+        };
+        /*private*/ Castle.removeDeadFriendlyCastles = function (r) {
+            var robots = r.getVisibleRobots();
+            var deadCastle = -1;
+            {
+                var array186 = (function (m) { var r = []; if (m.entries == null)
+                    m.entries = []; for (var i = 0; i < m.entries.length; i++)
+                    r.push(m.entries[i].key); return r; })(Castle.otherCastleLocations);
+                for (var index185 = 0; index185 < array186.length; index185++) {
+                    var castleId = array186[index185];
+                    {
+                        var foundId = false;
+                        for (var index187 = 0; index187 < robots.length; index187++) {
+                            var robot = robots[index187];
+                            {
+                                if (robot.id === castleId) {
+                                    foundId = true;
+                                }
+                            }
+                        }
+                        if (!foundId) {
+                            deadCastle = castleId;
+                            break;
+                        }
+                    }
+                }
+            }
+            if (deadCastle !== -1) {
+                r.log("Castle " + deadCastle + " has died.");
+                /* remove */ (function (m, k) { if (m.entries == null)
+                    m.entries = []; for (var i = 0; i < m.entries.length; i++)
+                    if (m.entries[i].key.equals != null && m.entries[i].key.equals(k) || m.entries[i].key === k) {
+                        return m.entries.splice(i, 1)[0];
+                    } })(Castle.otherCastleLocations_$LI$(), deadCastle);
+            }
+            Castle.tickMax = (function (m) { if (m.entries == null)
+                m.entries = []; return m.entries.length; })(Castle.otherCastleLocations_$LI$()) + 1;
+        };
+        Castle.initializeLattice = function (r) {
+            var result = ([]);
+            var m = 63;
+            var n = 63;
+            var left = 0;
+            var right = n - 1;
+            var top = 0;
+            var bottom = m - 1;
+            while ((result.length < m * n)) {
+                for (var j = left; j <= right; j++) {
+                    /* add */ result.splice(0, 0, new bc19.Point(top, j));
+                }
+                ;
+                top++;
+                for (var i = top; i <= bottom; i++) {
+                    /* add */ result.splice(0, 0, new bc19.Point(i, right));
+                }
+                ;
+                right--;
+                if (bottom < top)
+                    break;
+                for (var j = right; j >= left; j--) {
+                    /* add */ result.splice(0, 0, new bc19.Point(bottom, j));
+                }
+                ;
+                bottom--;
+                if (right < left)
+                    break;
+                for (var i = bottom; i >= top; i--) {
+                    /* add */ result.splice(0, 0, new bc19.Point(i, left));
+                }
+                ;
+                left++;
+            }
+            ;
+            var myLoc = new bc19.Point(r.me.x, r.me.y);
+            var passableMap = r.getPassableMap();
+            var karbMap = r.getKarboniteMap();
+            var fuelMap = r.getFuelMap();
+            for (var index188 = 0; index188 < result.length; index188++) {
+                var offset = result[index188];
+                {
+                    var dx = offset.x - (((n - 1) / 2 | 0));
+                    var dy = offset.y - (((m - 1) / 2 | 0));
+                    var mapLoc = new bc19.Point(myLoc.x + dx, myLoc.y + dy);
+                    var behindCastles = true;
+                    for (var index189 = 0; index189 < Castle.enemyCastleLocations_$LI$().length; index189++) {
+                        var enemyLoc = Castle.enemyCastleLocations_$LI$()[index189];
+                        {
+                            if (bc19.Utils.computeManhattanDistance(myLoc, enemyLoc) >= ((bc19.Utils.computeManhattanDistance(enemyLoc, mapLoc) * 1.2) | 0)) {
+                                behindCastles = false;
+                            }
+                        }
+                    }
+                    if (mapLoc.x >= 0 && mapLoc.x < passableMap[0].length && mapLoc.y >= 0 && mapLoc.y < passableMap.length && passableMap[mapLoc.y][mapLoc.x] && !karbMap[mapLoc.y][mapLoc.x] && !fuelMap[mapLoc.y][mapLoc.x] && !behindCastles) {
+                        if ((dx + dy + 200) % 2 === (myLoc.x + myLoc.y) % 2) {
+                            /* add */ (Castle.latticeLocations_$LI$().push(mapLoc) > 0);
+                        }
+                        else {
+                            /* add */ Castle.latticeLocationsCrusader_$LI$().splice(0, 0, mapLoc);
+                        }
+                    }
+                }
+            }
+            Castle.crusaderUnitsBuilt = Castle.latticeLocationsCrusader_$LI$().length - 70;
+        };
+        /*private*/ Castle.cleanupPilgrimQueue = function (r) {
+            var toBuild = Castle.pilgrimLocationQueue.peek();
+            if (toBuild == null) {
+                return;
+            }
+            if (toBuild.x === -1) {
+                if (!(function (m, k) { if (m.entries == null)
+                    m.entries = []; for (var i = 0; i < m.entries.length; i++)
+                    if (m.entries[i].key.equals != null && m.entries[i].key.equals(k) || m.entries[i].key === k) {
+                        return true;
+                    } return false; })(Castle.otherCastleLocations_$LI$(), toBuild.y)) {
+                    Castle.pilgrimLocationQueue.dequeue();
+                    Castle.cleanupPilgrimQueue(r);
+                    return;
+                }
+            }
+            Castle.handleFriendlyPilgrimSpawnedMessages(r);
+        };
+        /*private*/ Castle.buildPilgrimIfNeeded = function (r) {
+            var pilgrimTarget = Castle.pilgrimLocationQueue.peek();
+            if (pilgrimTarget == null) {
+                return null;
+            }
+            if (pilgrimTarget.x !== -1) {
+                bc19.CastleTalkUtils.sendFriendlyPilgrimSpawned(r);
+                bc19.CommunicationUtils.sendPilgrimTargetMessage(r, pilgrimTarget, bc19.CommunicationUtils.PILGRIM_TARGET_RADIUS_SQ);
+                var action = bc19.Utils.tryAndBuildInDirectionOf(r, pilgrimTarget, r.SPECS.PILGRIM);
+                if (action != null) {
+                    Castle.pilgrimLocationQueue.dequeue();
+                    return action;
+                }
+                else {
+                    bc19.CastleTalkUtils.invalidate(r);
+                }
+            }
+            return null;
+        };
+        /*private*/ Castle.updatePilgrimLocations = function (r) {
+            var robots = bc19.Utils.getRobotsInRange(r, r.SPECS.PILGRIM, true, 0, 5);
+            for (var index190 = 0; index190 < robots.length; index190++) {
+                var rob = robots[index190];
+                {
+                    var target = bc19.CommunicationUtils.getPilgrimTargetForCastle(r, rob);
+                    if (target != null) {
+                        /* put */ (function (m, k, v) { if (m.entries == null)
+                            m.entries = []; for (var i = 0; i < m.entries.length; i++)
+                            if (m.entries[i].key.equals != null && m.entries[i].key.equals(k) || m.entries[i].key === k) {
+                                m.entries[i].value = v;
+                                return;
+                            } m.entries.push({ key: k, value: v, getKey: function () { return this.key; }, getValue: function () { return this.value; } }); })(Castle.pilgrimToTarget_$LI$(), rob.id, target);
+                    }
+                }
+            }
+            var allRobots = ([]);
+            {
+                var array192 = r.getVisibleRobots();
+                for (var index191 = 0; index191 < array192.length; index191++) {
+                    var rob = array192[index191];
+                    {
+                        if ((function (m, k) { if (m.entries == null)
+                            m.entries = []; for (var i = 0; i < m.entries.length; i++)
+                            if (m.entries[i].key.equals != null && m.entries[i].key.equals(k) || m.entries[i].key === k) {
+                                return true;
+                            } return false; })(Castle.pilgrimToTarget_$LI$(), rob.id)) {
+                            /* add */ (function (s, e) { if (s.indexOf(e) == -1) {
+                                s.push(e);
+                                return true;
+                            }
+                            else {
+                                return false;
+                            } })(allRobots, rob.id);
+                        }
+                    }
+                }
+            }
+            {
+                var array194 = (function (m) { var r = []; if (m.entries == null)
+                    m.entries = []; for (var i = 0; i < m.entries.length; i++)
+                    r.push(m.entries[i].key); return r; })(Castle.pilgrimToTarget_$LI$());
+                for (var index193 = 0; index193 < array194.length; index193++) {
+                    var id = array194[index193];
+                    {
+                        if (!(allRobots.indexOf((id)) >= 0)) {
+                            /* remove */ (function (m, k) { if (m.entries == null)
+                                m.entries = []; for (var i = 0; i < m.entries.length; i++)
+                                if (m.entries[i].key.equals != null && m.entries[i].key.equals(k) || m.entries[i].key === k) {
+                                    return m.entries.splice(i, 1)[0];
+                                } })(Castle.pilgrimToTarget_$LI$(), id);
+                        }
+                    }
+                }
+            }
+        };
+        /*private*/ Castle.computeNumChurchesToAllowBuilding = function (r, candidates) {
+            var centroids = bc19.Utils.getClusterLocations(candidates);
+            r.log("Centroids are: ");
+            for (var index195 = 0; index195 < centroids.length; index195++) {
+                var point = centroids[index195];
+                {
+                    r.log(point.x + " " + point.y);
+                }
+            }
+            var toBuild = ([]);
+            for (var index196 = 0; index196 < centroids.length; index196++) {
+                var point = centroids[index196];
+                {
+                    var shouldBuild = bc19.Utils.computeEuclideanDistance(bc19.Utils.myLocation(r), point) > bc19.Constants.MIN_CHURCH_BUILD_DISTANCE;
+                    {
+                        var array198 = (function (m) { var r = []; if (m.entries == null)
+                            m.entries = []; for (var i = 0; i < m.entries.length; i++)
+                            r.push(m.entries[i].value); return r; })(Castle.otherCastleLocations_$LI$());
+                        for (var index197 = 0; index197 < array198.length; index197++) {
+                            var otherCastleLoc = array198[index197];
+                            {
+                                if (bc19.Utils.computeEuclideanDistance(otherCastleLoc, point) < bc19.Constants.MIN_CHURCH_BUILD_DISTANCE) {
+                                    shouldBuild = false;
+                                    break;
+                                }
+                            }
+                        }
+                    }
+                    if (shouldBuild) {
+                        /* add */ (toBuild.push(point) > 0);
+                    }
+                }
+            }
+            r.log("We are going to build " + toBuild.length + " churches.");
+            return toBuild.length;
+        };
+        /*private*/ Castle.decrementChurchesToAllowBuildingIfNecessary = function (r) {
+            if (Castle.pickUnitToBuild(r) !== r.SPECS.CHURCH) {
+                return;
+            }
+            if (!Castle.pilgrimHadChanceToBuildChurch && r.fuel >= bc19.Utils.getSpecs(r, r.SPECS.CHURCH).CONSTRUCTION_FUEL && r.karbonite >= bc19.Utils.getSpecs(r, r.SPECS.CHURCH).CONSTRUCTION_KARBONITE) {
+                Castle.pilgrimHadChanceToBuildChurch = true;
+            }
+            else if (Castle.pilgrimHadChanceToBuildChurch && bc19.Utils.canBuild(r, r.SPECS.CHURCH)) {
+                Castle.churchesToAllowBuilding--;
+                Castle.buildTypeTick++;
+                Castle.pilgrimHadChanceToBuildChurch = false;
+            }
+            else {
+                Castle.pilgrimHadChanceToBuildChurch = false;
+            }
+            {
+                var array200 = r.getVisibleRobots();
+                for (var index199 = 0; index199 < array200.length; index199++) {
+                    var robot = array200[index199];
+                    {
+                        if (bc19.CastleTalkUtils.pilgrimDoneBuildingChurch(r, robot)) {
+                            Castle.churchesToAllowBuilding--;
+                            Castle.buildTypeTick++;
+                        }
+                    }
+                }
+            }
+        };
+        Castle.act = function (r) {
+            r.log("round is " + r.__turn);
+            Castle.removeDeadFriendlyCastles(r);
+            if (r.__turn > 5) {
+                Castle.cleanupPilgrimQueue(r);
+            }
+            Castle.decrementChurchesToAllowBuildingIfNecessary(r);
+            Castle.updatePilgrimLocations(r);
+            Castle.handleCastleTalk(r);
+            if (r.__turn > 5 && Castle.pickUnitToBuild(r) === r.SPECS.PILGRIM) {
+                var action = Castle.buildPilgrimIfNeeded(r);
+                if (action != null) {
+                    Castle.buildTypeTick++;
+                    return action;
+                }
+            }
+            if (Castle.mostContestedPoint != null && Castle.initialAggressiveScoutUnitsBuilt < bc19.Constants.NUM_AGGRESSIVE_SCOUT_UNITS_TO_BUILD) {
+                var toGo = bc19.Utils.getNonResourceSpotAround(r, Castle.mostContestedPoint);
+                if (toGo != null) {
+                    var action = bc19.Utils.tryAndBuildInOptimalSpace(r, r.SPECS.PROPHET);
+                    if (action != null) {
+                        r.log("Sending aggressive unit to " + toGo.x + " " + toGo.y);
+                        bc19.CommunicationUtils.sendAggressiveScoutLocation(r, toGo);
+                        Castle.initialAggressiveScoutUnitsBuilt++;
+                        return action;
+                    }
+                }
+            }
+            if (r.__turn > bc19.Constants.CASTLE_SPAM_CRUSADERS_TURN_THRESHOLD) {
+                if (r.__turn < bc19.Constants.FUEL_CAP_TURN_THRESHOLD || r.fuel > bc19.Constants.FUEL_CAP) {
+                    var action = bc19.Utils.tryAndBuildInOptimalSpace(r, r.SPECS.CRUSADER);
+                    if (action != null) {
+                        if (Castle.crusaderUnitsBuilt < Castle.latticeLocationsCrusader_$LI$().length)
+                            bc19.CommunicationUtils.sendTurtleLocation(r, /* get */ Castle.latticeLocationsCrusader_$LI$()[Castle.crusaderUnitsBuilt]);
+                        Castle.crusaderUnitsBuilt++;
+                        return action;
+                    }
+                }
+            }
+            if (Castle.pickUnitToBuild(r) === r.SPECS.PROPHET) {
+                if (r.__turn <= bc19.Constants.CASTLE_CREATE_COMBAT_PROPHETS_TURN_THRESHOLD) {
+                    var numEnemyUnits = bc19.Utils.getRobotsInRange(r, -1, false, 0, 1000).length;
+                    var numFriendlyProphets = bc19.Utils.getRobotsInRange(r, r.SPECS.PROPHET, true, 0, 1000).length;
+                    if (numFriendlyProphets < numEnemyUnits) {
+                        var action = bc19.Utils.tryAndBuildInOptimalSpace(r, r.SPECS.PROPHET);
+                        if (action != null) {
+                            bc19.CommunicationUtils.sendTurtleLocation(r, /* get */ Castle.latticeLocations_$LI$()[Castle.turtleUnitsBuilt]);
+                            Castle.turtleUnitsBuilt++;
+                            return action;
+                        }
+                    }
+                }
+                else {
+                    if (r.__turn < bc19.Constants.FUEL_CAP_TURN_THRESHOLD || r.fuel > bc19.Constants.FUEL_CAP) {
+                        if (bc19.Utils.canBuild(r, r.SPECS.PROPHET) && Castle.tick < Castle.tickMax) {
+                            Castle.tick++;
+                        }
+                        if (Castle.tick >= Castle.tickMax) {
+                            var action = bc19.Utils.tryAndBuildInOptimalSpace(r, r.SPECS.PROPHET);
+                            if (action != null) {
+                                Castle.enemyCastleLocationIndex = 1;
+                                Castle.tick = 0;
+                                bc19.CommunicationUtils.sendTurtleLocation(r, /* get */ Castle.latticeLocations_$LI$()[Castle.turtleUnitsBuilt]);
+                                Castle.turtleUnitsBuilt++;
+                                Castle.buildTypeTick++;
+                                return action;
+                            }
+                        }
+                    }
+                }
+            }
+            var attackAction = bc19.Utils.tryAndAttack(r, bc19.Constants.CASTLE_ATTACK_RADIUS_SQ);
+            if (attackAction != null) {
+                return attackAction;
+            }
+            return null;
+        };
+        return Castle;
+    }());
+    Castle.initialAggressiveScoutUnitsBuilt = 0;
+    Castle.turtleUnitsBuilt = 6;
+    Castle.crusaderUnitsBuilt = 20;
+    Castle.tick = 0;
+    Castle.tickMax = 1;
+    Castle.buildTypeTick = 0;
+    Castle.UNIT_TYPE_MODULUS = 10;
+    Castle.churchesToAllowBuilding = 0;
+    Castle.pilgrimLocationQueue = null;
+    Castle.mostContestedPoint = null;
+    Castle.pilgrimHadChanceToBuildChurch = false;
+    bc19.Castle = Castle;
+    Castle["__class"] = "bc19.Castle";
+})(bc19 || (bc19 = {}));
+bc19.Castle.latticeLocationsCrusader_$LI$();
+bc19.Castle.latticeLocations_$LI$();
+bc19.Castle.enemyCastleLocations_$LI$();
+bc19.Castle.otherCastleLocations_$LI$();
+bc19.Castle.enemyCastleLocationIndex_$LI$();
+bc19.Castle.pilgrimToTarget_$LI$();
+bc19.CommunicationUtils.CASTLE_INFORM_MASK_$LI$();
+bc19.CommunicationUtils.AGGRESSIVE_SCOUT_MASK_$LI$();
+bc19.CommunicationUtils.ENEMY_CASTLE_LOCATION_MASK_$LI$();
+bc19.CommunicationUtils.PROPHET_ATTACK_MASK_$LI$();
+bc19.CommunicationUtils.PROPHET_BUMP_MASK_$LI$();
+bc19.CommunicationUtils.TURTLE_MASK_$LI$();
+bc19.CommunicationUtils.PILGRIM_TARGET_MASK_$LI$();
+bc19.Prophet.otherEnemyCastleLocations_$LI$();
+bc19.Prophet.state_$LI$();
+bc19.Constants.TURNS_BEFORE_DONE_RECEIVING_ENEMY_CASTLE_LOCATIONS_$LI$();
+bc19.Ring.ring_$LI$();
+bc19.CastleTalkUtils.DONE_BUILDING_CHURCH_MASK_$LI$();
+bc19.CastleTalkUtils.FRIENDLY_PILGRIM_SPAWNED_MASK_$LI$();
+bc19.CastleTalkUtils.ENEMY_CASTLE_KILLED_MASK_$LI$();
+bc19.CastleTalkUtils.CASTLE_LOCATION_COMMUNICATION_MASK_$LI$();
+bc19.Pilgrim.state_$LI$();
+bc19.Pilgrim.knownTargets_$LI$();
+//# sourceMappingURL=bundle.js.map
+var specs = {"COMMUNICATION_BITS":16,"CASTLE_TALK_BITS":8,"MAX_ROUNDS":1000,"TRICKLE_FUEL":25,"INITIAL_KARBONITE":100,"INITIAL_FUEL":500,"MINE_FUEL_COST":1,"KARBONITE_YIELD":2,"FUEL_YIELD":10,"MAX_TRADE":1024,"MAX_BOARD_SIZE":64,"MAX_ID":4096,"CASTLE":0,"CHURCH":1,"PILGRIM":2,"CRUSADER":3,"PROPHET":4,"PREACHER":5,"RED":0,"BLUE":1,"CHESS_INITIAL":100,"CHESS_EXTRA":20,"TURN_MAX_TIME":200,"MAX_MEMORY":50000000,"UNITS":[{"CONSTRUCTION_KARBONITE":null,"CONSTRUCTION_FUEL":null,"KARBONITE_CAPACITY":null,"FUEL_CAPACITY":null,"SPEED":0,"FUEL_PER_MOVE":null,"STARTING_HP":200,"VISION_RADIUS":100,"ATTACK_DAMAGE":10,"ATTACK_RADIUS":[1,64],"ATTACK_FUEL_COST":10,"DAMAGE_SPREAD":0},{"CONSTRUCTION_KARBONITE":50,"CONSTRUCTION_FUEL":200,"KARBONITE_CAPACITY":null,"FUEL_CAPACITY":null,"SPEED":0,"FUEL_PER_MOVE":null,"STARTING_HP":100,"VISION_RADIUS":100,"ATTACK_DAMAGE":0,"ATTACK_RADIUS":0,"ATTACK_FUEL_COST":0,"DAMAGE_SPREAD":0},{"CONSTRUCTION_KARBONITE":10,"CONSTRUCTION_FUEL":50,"KARBONITE_CAPACITY":20,"FUEL_CAPACITY":100,"SPEED":4,"FUEL_PER_MOVE":1,"STARTING_HP":10,"VISION_RADIUS":100,"ATTACK_DAMAGE":null,"ATTACK_RADIUS":null,"ATTACK_FUEL_COST":null,"DAMAGE_SPREAD":null},{"CONSTRUCTION_KARBONITE":15,"CONSTRUCTION_FUEL":50,"KARBONITE_CAPACITY":20,"FUEL_CAPACITY":100,"SPEED":9,"FUEL_PER_MOVE":1,"STARTING_HP":40,"VISION_RADIUS":49,"ATTACK_DAMAGE":10,"ATTACK_RADIUS":[1,16],"ATTACK_FUEL_COST":10,"DAMAGE_SPREAD":0},{"CONSTRUCTION_KARBONITE":25,"CONSTRUCTION_FUEL":50,"KARBONITE_CAPACITY":20,"FUEL_CAPACITY":100,"SPEED":4,"FUEL_PER_MOVE":2,"STARTING_HP":20,"VISION_RADIUS":64,"ATTACK_DAMAGE":10,"ATTACK_RADIUS":[16,64],"ATTACK_FUEL_COST":25,"DAMAGE_SPREAD":0},{"CONSTRUCTION_KARBONITE":30,"CONSTRUCTION_FUEL":50,"KARBONITE_CAPACITY":20,"FUEL_CAPACITY":100,"SPEED":4,"FUEL_PER_MOVE":3,"STARTING_HP":60,"VISION_RADIUS":16,"ATTACK_DAMAGE":20,"ATTACK_RADIUS":[1,16],"ATTACK_FUEL_COST":15,"DAMAGE_SPREAD":3}]};
+var robot = new bc19.MyRobot(); robot.setSpecs(specs);

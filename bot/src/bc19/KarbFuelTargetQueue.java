@@ -6,7 +6,9 @@ import java.util.List;
 
 public class KarbFuelTargetQueue {
     private ArrayList<Point> allCastlePilgrimBuildLocations = new ArrayList<>();
-    private PriorityQueue pilgrimLocationQueue = null;
+    private PriorityQueue karbQueue = null;
+    private PriorityQueue fuelQueue = null;
+    private int counter = 0;
     private Point mostContestedPoint = null;
     
     public KarbFuelTargetQueue(MyRobot r, HashMap<Integer, Point> otherCastleLocations, List<Point> enemyCastleLocations) {
@@ -30,12 +32,20 @@ public class KarbFuelTargetQueue {
         Navigation myMap = new Navigation(r, r.getPassableMap(), myPosition);
         castleIdToResourceMap.put(r.me.id, myMap);
 
-        List<Point> resourceLocationsToConsider = Utils.getKarbonitePoints(r);
-        resourceLocationsToConsider.addAll(Utils.getFuelPoints(r));
+        List<Point> karbLocationsToConsider = Utils.getKarbonitePoints(r);
+        List<Point> fuelLocationsToConsider = Utils.getFuelPoints(r);
 
-        PriorityQueue pilgrimLocationQueue = new PriorityQueue();
+
+        fuelQueue = computeResourceQueue(r, castleIdToResourceMap, enemyMap, fuelLocationsToConsider);
+
+        karbQueue = computeResourceQueue(r, castleIdToResourceMap, enemyMap, karbLocationsToConsider);
+    }
+
+	private PriorityQueue computeResourceQueue(MyRobot r, HashMap<Integer, Navigation> castleIdToResourceMap,
+			Navigation enemyMap, List<Point> locationsToConsider) {
+		PriorityQueue toReturn = new PriorityQueue();
         double smallestContestedSpread = 1000000000;
-        for (Point point : resourceLocationsToConsider) {
+        for (Point point : locationsToConsider) {
 
             // Find the Castle ID with smallest potential
             int smallestId = -1;
@@ -57,7 +67,7 @@ public class KarbFuelTargetQueue {
 
             allCastlePilgrimBuildLocations.add(point);
             if (smallestId == r.me.id) {
-                pilgrimLocationQueue.enqueue(new Node(smallestValue, point));
+                toReturn.enqueue(new Node(smallestValue, point));
 
                 // Pick our most contested spot
                 double spread = enemyComp - smallestValue;
@@ -66,18 +76,24 @@ public class KarbFuelTargetQueue {
                     mostContestedPoint = point;
                 }
             } else {
-                pilgrimLocationQueue.enqueue(new Node(smallestValue, new Point(-1, smallestId)));
+                toReturn.enqueue(new Node(smallestValue, new Point(-1, smallestId)));
             }
         }
-        this.pilgrimLocationQueue = pilgrimLocationQueue;
-    }
+		return toReturn;
+	}
 
     public Point getMostContestedPoint() {
         return mostContestedPoint;
     }
     
     public Point dequeue() {
-    	Node n = pilgrimLocationQueue.dequeue();
+    	Node n;
+    	if(!karbQueue.isEmpty() && (counter%3 < 2 || fuelQueue.isEmpty())) {
+    		n = karbQueue.dequeue();
+    	} else {
+    		n = fuelQueue.dequeue();
+    	}
+    	counter++;
     	if(n==null) {
     		return null;
     	}
@@ -85,11 +101,16 @@ public class KarbFuelTargetQueue {
     }
     
     public boolean isEmpty() {
-    	return pilgrimLocationQueue.isEmpty();
+    	return karbQueue.isEmpty() && fuelQueue.isEmpty();
     }
     
     public Point peek() {
-    	Node n = pilgrimLocationQueue.peek();
+    	Node n;
+    	if(!karbQueue.isEmpty() && (counter%3 < 2 || fuelQueue.isEmpty())) {
+    		n = karbQueue.peek();
+    	} else {
+    		n = fuelQueue.peek();
+    	}
     	if(n==null) {
     		return null;
     	}
