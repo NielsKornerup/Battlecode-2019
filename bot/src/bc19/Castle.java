@@ -94,7 +94,7 @@ public class Castle {
             }
 
             // Initialize variables that depend on castle locations
-            lattice = new Lattice(r, otherCastleLocations);
+            lattice = new Lattice(r, otherCastleLocations, enemyCastleLocations);
             pilgrimLocationQueue = new KarbFuelTargetQueue(r, otherCastleLocations, enemyCastleLocations);
             churchesToAllowBuilding = computeNumChurchesToAllowBuilding(r, pilgrimLocationQueue.getAllCastlePilgrimBuildLocations());
             mostContestedPoint = pilgrimLocationQueue.getMostContestedPoint();
