@@ -80,6 +80,8 @@ public class Pilgrim {
         return true;
     }
 
+    private static int numTurnsPreventedFromMovingByProphet = 0;
+    private static final int NUM_TURNS_BEFORE_BUMPING = 3;
     public static Action act(MyRobot r) {
         // TODO add logic to regenerate Dijkstra map if null so the pilgrim isn't just fucked for all eternity
         if (r.turn == 1) {
@@ -125,7 +127,20 @@ public class Pilgrim {
                 }
             } else {
                 // Move towards Karbonite
-                return Utils.moveDijkstra(r, targetMap, 2);
+                Action move = Utils.moveDijkstra(r, targetMap, 2);
+                if (move != null) {
+                    return move;
+                } else {
+                    if (Utils.getAdjacentRobots(r, r.SPECS.PROPHET, true).size() > 0) {
+                        numTurnsPreventedFromMovingByProphet++;
+                    }
+                    if (numTurnsPreventedFromMovingByProphet > NUM_TURNS_BEFORE_BUMPING) {
+                        CommunicationUtils.sendBumpMessage(r, 1);
+                        numTurnsPreventedFromMovingByProphet = 0;
+                        return null;
+                    }
+                }
+
             }
         }
 

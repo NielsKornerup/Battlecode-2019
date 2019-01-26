@@ -330,6 +330,7 @@ public class Utils {
             RobotSort rob = new RobotSort(robot.id, robot.unit, robot.x, robot.y, distanceSquared, robot.health);
             toSort.add(rob);
         }
+        // TODO Collections.sort might not work
         Collections.sort(toSort);
         return toSort;
     }

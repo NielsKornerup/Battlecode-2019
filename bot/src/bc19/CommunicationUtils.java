@@ -131,6 +131,15 @@ public class CommunicationUtils {
 		return false;
 	}
 
+	public static boolean receivedAnyBumpMessage(MyRobot r) {
+		for (Robot other : r.getVisibleRobots()) {
+			if (r.isRadioing(other) && instructionMatches(PROPHET_BUMP_MASK, (short) other.signal)) {
+				return true;
+			}
+		}
+		return false;
+	}
+
 	public static boolean sendPilgrimTargetMessage(MyRobot r, Point target, int radius) {
 		short message = (short) (PILGRIM_TARGET_MASK | ((short) target.x << 6) | ((short) target.y));
 		return sendBroadcast(r, message, radius);

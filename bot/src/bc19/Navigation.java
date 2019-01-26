@@ -162,7 +162,7 @@ public class Navigation {
             }
         }
         if (bestDelta.x == 0 && bestDelta.y == 0){
-        	return null;
+            return null;
         }
         return bestDelta;
     }

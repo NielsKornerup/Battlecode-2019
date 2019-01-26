@@ -111,6 +111,11 @@ public class Prophet {
             return attackAction;
         }
 
+        // If we've been asked to move with a bump request, move.
+        if (CommunicationUtils.receivedAnyBumpMessage(r)) {
+            return Utils.moveRandom(r);
+        }
+
         // 2. Move towards aggression point
         return Utils.moveDijkstra(r, enemyCastleMap, 2);
     }
@@ -165,6 +170,12 @@ public class Prophet {
 
         // 2. Do either turtling or attacking actions
         if (state == State.TURTLING) {
+            // If we've been asked to move with a bump request, move.
+            // TODO make sure this isn't unnecessary
+            if (CommunicationUtils.receivedAnyBumpMessage(r)) {
+                return Utils.moveRandom(r);
+            }
+
             if (CommunicationUtils.receivedAttackMessage(r)) {
                 return beginAttack(r);
             }
