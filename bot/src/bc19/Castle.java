@@ -244,6 +244,14 @@ public class Castle {
         			behindCastles = false;
         		}
         	}
+        	behindCastles = false;
+        	
+        	for (Point otherCastleLoc : otherCastleLocations.values()) {
+        		if (Utils.computeManhattanDistance(myLoc, mapLoc) > Utils.computeManhattanDistance(otherCastleLoc, mapLoc)){
+        			continue;
+        		}
+        		
+        	}
         	
         	if (mapLoc.x>=0 && mapLoc.x < passableMap[0].length && mapLoc.y>=0 && mapLoc.y < passableMap.length 
         			&& passableMap[mapLoc.y][mapLoc.x] && !karbMap[mapLoc.y][mapLoc.x] && !fuelMap[mapLoc.y][mapLoc.x]
