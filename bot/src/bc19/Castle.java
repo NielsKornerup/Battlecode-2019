@@ -4,8 +4,6 @@ import java.util.*;
 public class Castle {
 
     private static int initialAggressiveScoutUnitsBuilt = 0;
-    private static int turtleUnitsBuilt = 6;
-    private static int crusaderUnitsBuilt = 20;
 
     private static HashMap<Integer, Point> pilgrimToTarget = new HashMap<>();
 
@@ -13,8 +11,6 @@ public class Castle {
 
     private static HashMap<Integer, Point> otherCastleLocations = new HashMap<>(); // Maps from unit ID to location
     private static ArrayList<Point> enemyCastleLocations = new ArrayList<>(); // Doesn't include the enemy castle that mirrors ours
-    private static ArrayList<Point> latticeLocations = new ArrayList<>();
-    private static ArrayList<Point> latticeLocationsCrusader = new ArrayList<>();
 
     private static int tick = 0; // Used to prevent one castle from building more than other castles
     private static int tickMax = 1; // Threshold for building again
@@ -23,8 +19,10 @@ public class Castle {
     private static final int UNIT_TYPE_MODULUS = 10;
 
     private static int churchesToAllowBuilding = 0;
-    private static KarbFuelTargetQueue pilgrimLocationQueue;
+    private static KarbFuelTargetQueue pilgrimLocationQueue = null;
     private static Point mostContestedPoint = null; // Tracks the point closest to enemy that aggressive unit should go for
+
+    private static Lattice lattice;
 
     public static int pickUnitToBuild(MyRobot r) {
         // NOTE: THIS METHOD MUST OPERATE COMPLETELY DETERMINISTICALLY AND NOT BE BASED ON TURN #
@@ -94,19 +92,12 @@ public class Castle {
             for (Integer id : otherCastleLocations.keySet()) {
                 enemyCastleLocations.add(Utils.getMirroredPosition(r, otherCastleLocations.get(id)));
             }
-            initializeLattice(r);
-            
-        } else if (r.turn == 5) {
-            pilgrimLocationQueue = new KarbFuelTargetQueue(r, otherCastleLocations, Castle.enemyCastleLocations);
+
+            // Initialize variables that depend on castle locations
+            lattice = new Lattice(r, otherCastleLocations);
+            pilgrimLocationQueue = new KarbFuelTargetQueue(r, otherCastleLocations, enemyCastleLocations);
             churchesToAllowBuilding = computeNumChurchesToAllowBuilding(r, pilgrimLocationQueue.getAllCastlePilgrimBuildLocations());
             mostContestedPoint = pilgrimLocationQueue.getMostContestedPoint();
-            /*r.log("I'm doing: ");
-            while (!pilgrimLocationQueue.isEmpty()) {
-                Node value = pilgrimLocationQueue.dequeue();
-                if (value.p.x != -1) {
-                    r.log(value.p.x + " " + value.p.y);
-                }
-            }*/
         }
     }
 
@@ -178,96 +169,6 @@ public class Castle {
             otherCastleLocations.remove(deadCastle);
         }
         tickMax = otherCastleLocations.size() + 1;
-    }
-    //https://www.programcreek.com/2013/01/leetcode-spiral-matrix-java/
-    
-    public static void initializeLattice(MyRobot r) {
-        ArrayList<Point> result = new ArrayList<>();
-     
-        int m = 63; //row
-        int n = 63; //col
-     
-        int left=0;
-        int right=n-1;
-        int top = 0;
-        int bottom = m-1;
-     
-        while(result.size()<m*n){
-            for(int j=left; j<=right; j++){
-            	result.add(0,new Point(top,j));
-            }
-            top++;
-     
-            for(int i=top; i<=bottom; i++){
-                result.add(0,new Point(i, right));
-            }
-            right--;
-     
-            //prevent duplicate row
-            if(bottom<top)
-                break;
-     
-            for(int j=right; j>=left; j--){
-                result.add(0,new Point(bottom, j));
-            }
-            bottom--;
-     
-            // prevent duplicate column
-            if(right<left)
-                break;
-     
-            for(int i=bottom; i>=top; i--){
-                result.add(0,new Point(i, left));
-            }
-            left++;
-        }
-        
-        Point myLoc = new Point(r.me.x, r.me.y);
-        boolean[][] passableMap = r.getPassableMap();
-        boolean[][] karbMap = r.getKarboniteMap();
-        boolean[][] fuelMap = r.getFuelMap();
-     
-        for (Point offset : result){
-        	int dx = offset.x-((n-1)/2);
-        	int dy = offset.y-((m-1)/2);
-        	//checkerboard pattern
-        	
-        	/*
-        	if (Math.abs(dx) < 2 || Math.abs(dy) < 2){
-        		continue;
-        	}
-        	*/
-        	Point mapLoc = new Point(myLoc.x+dx, myLoc.y+dy);
-        	boolean behindCastles = true;
-        	for (Point enemyLoc : enemyCastleLocations){
-        		if (Utils.computeManhattanDistance(myLoc,enemyLoc) >= (int)(Utils.computeManhattanDistance(enemyLoc,mapLoc)*1.2)){
-        			behindCastles = false;
-        		}
-        	}
-        	behindCastles = false;
-        	
-        	for (Point otherCastleLoc : otherCastleLocations.values()) {
-        		if (Utils.computeManhattanDistance(myLoc, mapLoc) > Utils.computeManhattanDistance(otherCastleLoc, mapLoc)){
-        			continue;
-        		}
-        		
-        	}
-        	
-        	if (mapLoc.x>=0 && mapLoc.x < passableMap[0].length && mapLoc.y>=0 && mapLoc.y < passableMap.length 
-        			&& passableMap[mapLoc.y][mapLoc.x] && !karbMap[mapLoc.y][mapLoc.x] && !fuelMap[mapLoc.y][mapLoc.x]
-        			&& !behindCastles){
-        		if ((dx+dy+200)%2==(myLoc.x+myLoc.y)%2){
-        			latticeLocations.add(mapLoc);
-            	} else {
-            		latticeLocationsCrusader.add(0,mapLoc);
-            	}
-        		
-        		//r.log("X: "+mapLoc.x+" Y: "+mapLoc.y);
-        	}
-        }
-        //Collections.reverse(latticeLocationsCrusader);
-        crusaderUnitsBuilt = latticeLocationsCrusader.size()-70;
-        
     }
 
     private static void cleanupPilgrimQueue(MyRobot r) {
@@ -393,7 +294,7 @@ public class Castle {
 
     public static Action act(MyRobot r) {
         removeDeadFriendlyCastles(r);
-        if (r.turn > 5) { // TODO hardcoded constant
+        if (pilgrimLocationQueue != null) {
             cleanupPilgrimQueue(r);
         }
         decrementChurchesToAllowBuildingIfNecessary(r);
@@ -434,56 +335,48 @@ public class Castle {
             if (r.turn < Constants.FUEL_CAP_TURN_THRESHOLD || r.fuel > Constants.FUEL_CAP) {
                 BuildAction action = Utils.tryAndBuildInOptimalSpace(r, r.SPECS.CRUSADER);
                 if (action != null) {
-                    //enemyCastleLocationIndex = 1;
-                	if (crusaderUnitsBuilt<latticeLocationsCrusader.size())
-                		CommunicationUtils.sendTurtleLocation(r, latticeLocationsCrusader.get(crusaderUnitsBuilt));
-                    crusaderUnitsBuilt++;
+                    Point crusaderLocation = lattice.popCrusaderLatticeLocation();
+                    if (crusaderLocation != null) {
+                        CommunicationUtils.sendTurtleLocation(r, crusaderLocation);
+                        return action;
+                    } else {
+                        r.log("Not spawning crusader because nowhere to send it.");
+                    }
                     /*
+                    enemyCastleLocationIndex = 1;
                     if (!alreadyBroadcastedLocation) {
                         broadcastEnemyCastleLocationIfNeeded(r);
                     }
                     */
-                    return action;
                 }
             }
         }
 
         // 4. Build a prophet.
         if (pickUnitToBuild(r) == r.SPECS.PROPHET) {
-            if (r.turn <= Constants.CASTLE_CREATE_COMBAT_PROPHETS_TURN_THRESHOLD) {
-                // Only build a prophet if we've detected enemies nearby and there are no prophets
-                int numEnemyUnits = Utils.getRobotsInRange(r, -1, false, 0, 1000).size();
-                int numFriendlyProphets = Utils.getRobotsInRange(r, r.SPECS.PROPHET, true, 0, 1000).size();
-                if (numFriendlyProphets < numEnemyUnits) {
-                    BuildAction action = Utils.tryAndBuildInOptimalSpace(r, r.SPECS.PROPHET);
-
-                    if (action != null) {
-                        CommunicationUtils.sendTurtleLocation(r, latticeLocations.get(turtleUnitsBuilt));
-                        turtleUnitsBuilt++;
-                        return action;
-                    }
+            if (r.turn < Constants.FUEL_CAP_TURN_THRESHOLD || r.fuel > Constants.FUEL_CAP) {
+                // TODO ignore the tick if in emergency (i.e. enemy military is approaching)
+                // TODO prioritize the castle closer to the enemy at the beginning of the game
+                // Increment tick when we have the opportunity to build
+                if (Utils.canBuild(r, r.SPECS.PROPHET) && tick < tickMax) {
+                    tick++;
                 }
-            } else {
-                if (r.turn < Constants.FUEL_CAP_TURN_THRESHOLD || r.fuel > Constants.FUEL_CAP) {
-                    // TODO ignore the tick if in emergency (i.e. enemy military is approaching)
-                    // TODO prioritize the castle closer to the enemy at the beginning of the game
-                    // Increment tick when we have the opportunity to build
-                    if (Utils.canBuild(r, r.SPECS.PROPHET) && tick < tickMax) {
-                        tick++;
-                    }
-                    if (tick >= tickMax) {
-                        BuildAction action = Utils.tryAndBuildInOptimalSpace(r, r.SPECS.PROPHET);
-                        if (action != null) {
-                            enemyCastleLocationIndex = 1;
-                        /* Commented out for now in favor of telling it where to go on the lattice
-                        /*if (!alreadyBroadcastedLocation) {
-                            broadcastEnemyCastleLocationIfNeeded(r);
-                        }*/
+                if (tick >= tickMax) {
+                    BuildAction action = Utils.tryAndBuildInOptimalSpace(r, r.SPECS.PROPHET);
+                    if (action != null) {
+                    /* Commented out for now in favor of telling it where to go on the lattice
+                        enemyCastleLocationIndex = 1;
+                    /*if (!alreadyBroadcastedLocation) {
+                        broadcastEnemyCastleLocationIfNeeded(r);
+                    }*/
+                        Point prophetLocation = lattice.popProphetLatticeLocation();
+                        if (prophetLocation != null) {
                             tick = 0;
-                            CommunicationUtils.sendTurtleLocation(r, latticeLocations.get(turtleUnitsBuilt));
-                            turtleUnitsBuilt++;
+                            CommunicationUtils.sendTurtleLocation(r, prophetLocation);
                             buildTypeTick++;
                             return action;
+                        } else {
+                            r.log("Not spawning prophet because nowhere to send it.");
                         }
                     }
                 }

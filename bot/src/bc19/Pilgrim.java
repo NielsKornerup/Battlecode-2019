@@ -70,6 +70,7 @@ public class Pilgrim {
     }
 
     private static boolean localLeader(MyRobot r) {
+        // TODO prioritize making the pilgrim sitting on fuel the local leader
         // The local leader should stay behind in order to spawn a church
         for (Robot rob: Utils.getRobotsInRange(r, r.SPECS.PILGRIM, true, 0, Constants.MIN_CHURCH_BUILD_DISTANCE * Constants.MIN_CHURCH_BUILD_DISTANCE)) {
             if (rob.id > r.id) {
