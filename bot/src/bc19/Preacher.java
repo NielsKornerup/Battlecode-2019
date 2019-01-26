@@ -6,6 +6,7 @@ package bc19;
 
 import java.util.ArrayList;
 
+// TODO : ABSTRACT THIS CODE FROM CRUSADER CODE
 public class Preacher {
 
 	private static Point initialCastleLocation;

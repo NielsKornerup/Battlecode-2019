@@ -103,10 +103,6 @@ public class Castle {
         }
     }
 
-    private static boolean rushLikeAMothaFucka() {
-        return true;
-    }
-
     private static PriorityQueue generatePilgrimLocationQueue(MyRobot r, HashMap<Integer, Point> otherCastleLocations) {
         HashMap<Integer, Navigation> castleIdToResourceMap = new HashMap<>();
         for (Integer id : otherCastleLocations.keySet()) {
@@ -384,14 +380,24 @@ public class Castle {
         return loc;
     }
 
+    public static boolean rushLikeAMothaFucka() {
+        return true;
+    }
+
     private static Action doRush(MyRobot r) {
         // NEED TO SPAWN ONLY 2-4 PILGRIMS THEN ONLY SPAWN PREACHERS
-        List<Point> karbPoints = Utils.getSortedKarbonitePoints(r);
-        if(rushPilgrimCount < Math.min(karbPoints.size(), 6)) {
-            Point targetPoint = karbPoints.get(rushPilgrimCount);
-            rushPilgrimCount++;
-            CommunicationUtils.sendPilgrimTargetMessage(r, targetPoint, CommunicationUtils.PILGRIM_TARGET_RADIUS_SQ);
+        Point closestKarbPoint = Utils.getClosestKarbonitePoint(r);
+        Point closestFuelPoint = Utils.getClosestFuelPoint(r);
+        if (rushPilgrimCount == 0) {
+            CommunicationUtils.sendPilgrimTargetMessage(r, closestKarbPoint, CommunicationUtils.PILGRIM_TARGET_RADIUS_SQ);
             BuildAction action = Utils.tryAndBuildInOptimalSpace(r, r.SPECS.PILGRIM);
+            rushPilgrimCount++;
+            return action;
+        }
+        if (rushPilgrimCount == 1) {
+            CommunicationUtils.sendPilgrimTargetMessage(r, closestFuelPoint, CommunicationUtils.PILGRIM_TARGET_RADIUS_SQ);
+            BuildAction action = Utils.tryAndBuildInOptimalSpace(r, r.SPECS.PILGRIM);
+            rushPilgrimCount++;
             return action;
         }
         BuildAction action = Utils.tryAndBuildInOptimalSpace(r, r.SPECS.PREACHER);

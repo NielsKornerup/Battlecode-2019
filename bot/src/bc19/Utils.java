@@ -166,7 +166,7 @@ public class Utils {
         }
         
         boolean[][] karb = r.getKarboniteMap();
-        if (karb[r.me.y][r.me.x]){
+        if (karb[r.me.y][r.me.x] && r.me.unit != r.SPECS.PILGRIM) {
         	return Utils.moveRandom(r);
         }
 
@@ -491,33 +491,40 @@ public class Utils {
         return targets;
     }
 
-    static class AugmentedPoint implements Comparable<AugmentedPoint> {
-        Point p;
-        int dist;
-
-        AugmentedPoint(Point p, int dist) {
-            this.p = p;
-            this.dist = dist;
+    public static Point getClosestKarbonitePoint(MyRobot r) {
+        Point myLoc = new Point(r.me.x, r.me.y);
+        List<Point> karbPoints = getKarbonitePoints(r);
+        int bestDist = Constants.MAX_INT;
+        Point closest = null;
+        for(Point kp : karbPoints) {
+            int dist = computeManhattanDistance(myLoc, kp);
+            if(dist < bestDist) {
+                bestDist = dist;
+                closest = kp;
+            }
         }
-
-        public int compareTo(AugmentedPoint o) {
-            return dist - o.dist;
+        if(closest == null) {
+            r.log("found no karbonite points");
         }
+        return closest;
     }
 
-    public static List<Point> getSortedKarbonitePoints(MyRobot r) {
-        List<Point> karbPoints = getKarbonitePoints(r);
-        List<AugmentedPoint> augmentedPoints = new ArrayList<>();
-        for(Point kp : karbPoints) {
-            int dist = computeManhattanDistance(kp, new Point(r.me.x, r.me.y));
-            augmentedPoints.add(new AugmentedPoint(kp, dist));
+    public static Point getClosestFuelPoint(MyRobot r) {
+        Point myLoc = new Point(r.me.x, r.me.y);
+        List<Point> fuelPoints = getFuelPoints(r);
+        int bestDist = Constants.MAX_INT;
+        Point closest = null;
+        for(Point fp : fuelPoints) {
+            int dist = computeManhattanDistance(myLoc, fp);
+            if(dist < bestDist) {
+                bestDist = dist;
+                closest = fp;
+            }
         }
-        Collections.sort(augmentedPoints);
-        List<Point> sortedPoints = new ArrayList<>();
-        for(AugmentedPoint ap : augmentedPoints) {
-            sortedPoints.add(ap.p);
+        if(closest == null) {
+            r.log("found no fuel points");
         }
-        return sortedPoints;
+        return closest;
     }
 
     public static Point getContestedKarboniteGuardPoint(MyRobot r){
