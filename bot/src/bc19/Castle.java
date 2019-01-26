@@ -55,7 +55,7 @@ public class Castle {
         if (r.turn == 1) {
             // Send our X coordinate
             CastleTalkUtils.sendCastleCoord(r, r.me.x);
-            
+
             //enemyCastleLocations
         } else if (r.turn == 2) {
             // Add X coordinates received from other castles
@@ -244,7 +244,6 @@ public class Castle {
             otherCastleLocations.remove(deadCastle);
         }
         tickMax = nearEnemyCastle(r) ? otherCastleLocations.size() : otherCastleLocations.size() + 1;
-        
     }
 
     private static void cleanupPilgrimQueue(MyRobot r) {
@@ -368,18 +367,39 @@ public class Castle {
         }
     }
 
+    private static Point getClosestOtherCastleLocation(MyRobot r) {
+        Point myLoc = new Point(r.me.x, r.me.y);
+        int bestDist = Constants.MAX_INT;
+        Point loc = null;
+        for (Point enemyCastleLoc : enemyCastleLocations) {
+            int dist = Utils.computeManhattanDistance(myLoc, enemyCastleLoc);
+            if (dist < bestDist) {
+                bestDist = dist;
+                loc = enemyCastleLoc;
+            }
+        }
+        if(loc == null) {
+            r.log("Could not find any enemy castle locations");
+        }
+        return loc;
+    }
+
     private static Action doRush(MyRobot r) {
         // NEED TO SPAWN ONLY 2-4 PILGRIMS THEN ONLY SPAWN PREACHERS
         List<Point> karbPoints = Utils.getSortedKarbonitePoints(r);
-        if(rushPilgrimCount < Math.min(karbPoints.size(), 4)) {
+        if(rushPilgrimCount < Math.min(karbPoints.size(), 6)) {
             Point targetPoint = karbPoints.get(rushPilgrimCount);
             rushPilgrimCount++;
             CommunicationUtils.sendPilgrimTargetMessage(r, targetPoint, CommunicationUtils.PILGRIM_TARGET_RADIUS_SQ);
             BuildAction action = Utils.tryAndBuildInOptimalSpace(r, r.SPECS.PILGRIM);
             return action;
         }
-        BuildAction action = Utils.tryAndBuildInRandomSpace(r, r.SPECS.PREACHER);
-        return action;
+        BuildAction action = Utils.tryAndBuildInOptimalSpace(r, r.SPECS.PREACHER);
+        if (action != null) {
+            CommunicationUtils.sendTurtleLocation(r, getClosestOtherCastleLocation(r));
+            return action;
+        }
+        return null;
     }
 
     public static Action act(MyRobot r) {
@@ -411,8 +431,8 @@ public class Castle {
 
         // Finish up broadcasting enemy castle location if needed. Commented in favor of telling where to go on lattice
         // boolean alreadyBroadcastedLocation = broadcastEnemyCastleLocationIfNeeded(r);
-    	
-    	// 1. If we haven't built any aggressive scout units yet, build them.
+
+        // 1. If we haven't built any aggressive scout units yet, build them.
 
         // TODO figure out when to intersperse building combat units
         if (r.turn > 5 && pickUnitToBuild(r) == r.SPECS.PILGRIM) { // TODO hardcoded constant
@@ -437,7 +457,7 @@ public class Castle {
                 }
             }
         }
-        
+
         // 3. Spam crusaders at end of game
         if (r.turn > Constants.CASTLE_SPAM_CRUSADERS_TURN_THRESHOLD) {
             if (r.turn < Constants.FUEL_CAP_TURN_THRESHOLD || r.fuel > Constants.FUEL_CAP) {
