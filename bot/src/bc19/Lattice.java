@@ -103,7 +103,19 @@ public class Lattice {
 			}
 		}
 		//Collections.reverse(crusaderLatticeLocations);
-		crusaderUnitIndex = crusaderLatticeLocations.size() - 70;
+		crusaderUnitIndex = crusaderLatticeLocations.size() - 80;
+		
+		//reorder the first X elements of the prophet lattice to build closer to the enemy first
+		PriorityQueue initialSpots = new PriorityQueue();
+		int totalInitialSpots = 13;
+		for (int i = 6; i < 6+totalInitialSpots; i++){
+			Point temp = prophetLatticeLocations.get(i);
+			int dist = Utils.computeManhattanDistance(temp, Utils.getMirroredPosition(r, new Point(r.me.x, r.me.y)));
+			initialSpots.enqueue(new Node(dist, temp));
+		}
+		for (int i = 6; i < 6+totalInitialSpots; i++){
+			prophetLatticeLocations.set(i, initialSpots.dequeue().p);
+		}
 	}
 
 	public Point popProphetLatticeLocation() {
