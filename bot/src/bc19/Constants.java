@@ -27,7 +27,6 @@ public class Constants {
 	public static final int PREACHER_FUEL_PER_MOVE = 3;
 
 	public static final int CASTLE_SPAM_CRUSADERS_TURN_THRESHOLD = 800;
-	public static final int CASTLE_CREATE_COMBAT_PROPHETS_TURN_THRESHOLD = 2;
 
 	public static final int CRUSADER_ATTACK_RADIUS = 4;
 
@@ -46,4 +45,6 @@ public class Constants {
 	public static final double ENEMY_RESOURCE_PENETRATION_PERCENTAGE = 1.2;
 
 	public static final int ATTACK_TURN = 800;
+
+	public static final int TURN_THRESHOLD_PRIORITIZE_CLOSEST_CASTLE = 50;
 }

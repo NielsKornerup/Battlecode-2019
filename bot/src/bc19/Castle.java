@@ -28,6 +28,10 @@ public class Castle {
 
     public static int pickUnitToBuild(MyRobot r) {
         // NOTE: THIS METHOD MUST OPERATE COMPLETELY DETERMINISTICALLY AND NOT BE BASED ON TURN #
+        if (Utils.getRobotsInRange(r, r.SPECS.PILGRIM, true, 0, 1000).size() >= 2
+                && Utils.getRobotsInRange(r, r.SPECS.PROPHET, true, 0, 1000).size() < 4) {
+            return r.SPECS.PROPHET;
+        }
 
         int value = buildTypeTick % UNIT_TYPE_MODULUS;
 
@@ -39,12 +43,9 @@ public class Castle {
             return r.SPECS.PROPHET;
         }
 
-
-        if (value < 2) {
-            return r.SPECS.PILGRIM;
-        } else if (value < 5) {
+        if (value < 4) {
             return r.SPECS.PROPHET;
-        } else if (value < 8) {
+        } else if (value < 6) {
             return r.SPECS.PILGRIM;
         } else {
             return r.SPECS.PROPHET;
@@ -151,7 +152,7 @@ public class Castle {
         handleEnemyCastleKilledMessages(r);
     }
     
-    private static boolean nearEnemyCastle(MyRobot r) {
+    private static boolean closestToEnemyCastle(MyRobot r) {
     	int closestSquareDistanceForOtherCastles = Constants.MAX_INT;
     	for(Point mine: Castle.otherCastleLocations.values()) {
     		for(Point p: enemyCastleLocations) {
@@ -186,7 +187,6 @@ public class Castle {
             r.log("Castle " + deadCastle + " has died.");
             otherCastleLocations.remove(deadCastle);
         }
-        tickMax = nearEnemyCastle(r) ? otherCastleLocations.size() : otherCastleLocations.size() + 1;
     }
 
     private static void cleanupPilgrimQueue(MyRobot r) {
@@ -338,8 +338,19 @@ public class Castle {
         return null;
     }
 
+    private static void calculateTickMax(MyRobot r) {
+        // Protect against rush
+        if (r.turn < Constants.TURN_THRESHOLD_PRIORITIZE_CLOSEST_CASTLE) {
+            // TODO make this weighted
+            tickMax = closestToEnemyCastle(r) ? 1 : otherCastleLocations.size() + 1;
+        } else {
+            tickMax = otherCastleLocations.size() + 1;
+        }
+    }
+
     public static Action act(MyRobot r) {
         removeDeadFriendlyCastles(r);
+        calculateTickMax(r);
         if (r.turn > 5 && pilgrimLocationQueue != null) {
             cleanupPilgrimQueue(r);
         }
@@ -397,7 +408,9 @@ public class Castle {
         }
 
         // 1. If we haven't built any aggressive scout units yet, build them.
-        if (mostContestedPoint != null && initialAggressiveScoutUnitsBuilt < Constants.NUM_AGGRESSIVE_SCOUT_UNITS_TO_BUILD) {
+        if (Utils.getRobotsInRange(r, r.SPECS.PROPHET, true, 0, 1000).size() >= 4
+                && mostContestedPoint != null
+                && initialAggressiveScoutUnitsBuilt < Constants.NUM_AGGRESSIVE_SCOUT_UNITS_TO_BUILD) {
             Point toGo = Utils.getNonResourceSpotAround(r, mostContestedPoint);
             if (toGo != null) {
                 BuildAction action = Utils.tryAndBuildInOptimalSpace(r, r.SPECS.PROPHET);
