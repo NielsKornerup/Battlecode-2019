@@ -91,7 +91,7 @@ public class Lattice {
 
 			}
 			if (isFriendlyDomain){
-				break;
+				continue;
 			}
 			//r.log("X: "+dx+" Y: "+dy);
 			if (mapLoc.x >= 0 && mapLoc.x < passableMap[0].length && mapLoc.y >= 0 && mapLoc.y < passableMap.length
