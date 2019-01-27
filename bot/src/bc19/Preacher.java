@@ -7,13 +7,10 @@ package bc19;
 import java.util.ArrayList;
 import java.util.List;
 
-// TODO : ABSTRACT THIS CODE FROM CRUSADER CODE
 public class Preacher {
 
     private static Point initialCastleLocation;
     private static Point enemyCastleLocation;
-
-    private static boolean isTurtle = false;
 
     private static Navigation enemyCastleMap;
 
@@ -47,12 +44,13 @@ public class Preacher {
         if (r.turn == 1) {
             initialCastleLocation = Utils.getSpawningCastleOrChurchLocation(r);
             enemyCastleLocation = Utils.getMirroredPosition(r, initialCastleLocation);
-            doCrusaderInitialization(r);
         }
 
         if (!shouldClump && CommunicationUtils.receivedRushClumpMessage(r)) {
             shouldClump = true;
         }
+
+        doCrusaderInitialization(r);
 
         invalidateEnemyCastleTargetsIfNecessary(r);
 
@@ -82,9 +80,11 @@ public class Preacher {
         // Check if we are a turtle
         for (Robot robot : r.getVisibleRobots()) {
             if (CommunicationUtils.receivedTurtleLocation(r, robot)) {
-                isTurtle = true;
                 ArrayList<Point> targets = new ArrayList<>();
                 targets.add(CommunicationUtils.getTurtleLocation(r, robot));
+                if(r.me.turn > 10) {
+                    r.log("new Preacher target " + targets.get(0).toString());
+                }
                 enemyCastleMap = new Navigation(r, r.getPassableMap(), targets);
                 break;
             }

@@ -48,7 +48,7 @@ public class CommunicationUtils {
 	}
 	
 	public static boolean receivedTurtleLocation(MyRobot r, Robot other) {
-		return (r.isRadioing(other) && instructionMatches(TURTLE_MASK, other.signal));
+		return (r.me.team == other.team && r.isRadioing(other) && instructionMatches(TURTLE_MASK, other.signal));
 	}
 
 	public static Point getAggressiveScoutLocation(MyRobot r, Robot other) {
@@ -70,6 +70,11 @@ public class CommunicationUtils {
 	public static boolean sendTurtleLocation(MyRobot r, Point target) {
 		short message = (short) (TURTLE_MASK | ((short) target.x << 6) | ((short) target.y));
 		return sendBroadcast(r, message, AGGRESSIVE_SCOUT_LOCATION_SQ);
+	}
+
+	public static boolean sendTurtleLocation(MyRobot r, Point target, int radius) {
+		short message = (short) (TURTLE_MASK | ((short) target.x << 6) | ((short) target.y));
+		return sendBroadcast(r, message, radius * radius);
 	}
 
 	public static boolean sendAggressiveScoutLocation(MyRobot r, Point target) {

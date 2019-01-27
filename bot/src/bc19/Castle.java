@@ -24,7 +24,9 @@ public class Castle {
     private static boolean waitingToBuildChurch = false;
 
     private static int buildTurnTick = 0;
+
     private static int MAX_BUILD_TURN_TICK = 2;
+    private static boolean castleKilled = false;
 
     public static void handleCastleLocationMessages(MyRobot r) {
         if (r.turn == 1) {
@@ -91,6 +93,7 @@ public class Castle {
                 }
                 if (pointToRemove != null) {
                     enemyCastleLocations.remove(pointToRemove);
+                    castleKilled = true;
                 }
             }
         }
@@ -336,6 +339,12 @@ public class Castle {
     }
 
     private static Action doRush(MyRobot r) {
+        if (castleKilled) {
+            // TODO : reduce this radius size
+            r.log("Castle killed so sending global new target location " + getClosestOtherCastleLocation(r).toString() + " distance " + r.karboniteMap.length);
+            CommunicationUtils.sendTurtleLocation(r, getClosestOtherCastleLocation(r), r.karboniteMap.length);
+        }
+
         BuildAction action = Utils.tryAndBuildInOptimalSpace(r, r.SPECS.PREACHER);
         if (action != null) {
             if(r.turn >= Constants.START_RUSH_CLUMPING) {
@@ -475,6 +484,7 @@ public class Castle {
     }
 
     public static Action act(MyRobot r) {
+        castleKilled = false;
         removeDeadFriendlyCastles(r);
         if (r.turn > 5 && pilgrimLocationQueue != null) {
             cleanupPilgrimQueue(r);
