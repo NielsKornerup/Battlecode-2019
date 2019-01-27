@@ -198,7 +198,7 @@ public class Castle {
         if (toBuild.x == -1) {
             // Not our responsibility, but check if castle is dead and remove
             if (!otherCastleLocations.containsKey(toBuild.y)) {
-                pilgrimLocationQueue.dequeue();
+                Point removed = pilgrimLocationQueue.dequeue();
                 cleanupPilgrimQueue(r);
                 return;
             }
@@ -223,7 +223,8 @@ public class Castle {
             CommunicationUtils.sendPilgrimTargetMessage(r, pilgrimTarget, CommunicationUtils.PILGRIM_TARGET_RADIUS_SQ);
             BuildAction action = Utils.tryAndBuildInDirectionOf(r, pilgrimTarget, r.SPECS.PILGRIM);
             if (action != null) {
-                pilgrimLocationQueue.dequeue();
+                CastleTalkUtils.sendFriendlyPilgrimSpawned(r);
+                Point result = pilgrimLocationQueue.dequeue();
                 return action;
             } else {
                 CastleTalkUtils.invalidate(r);
@@ -259,10 +260,6 @@ public class Castle {
 
     private static int computeNumChurchesToAllowBuilding(MyRobot r, ArrayList<Point> candidates) {
         List<Point> centroids = Utils.getClusterLocations(candidates);
-        r.log("Centroids are: ");
-        for (Point point : centroids) {
-            r.log(point.x + " " + point.y);
-        }
 
         List<Point> toBuild = new ArrayList<>();
         // Eliminate centroids that are within our radius
@@ -343,7 +340,7 @@ public class Castle {
 
     public static Action act(MyRobot r) {
         removeDeadFriendlyCastles(r);
-        if (pilgrimLocationQueue != null) {
+        if (r.turn > 5 && pilgrimLocationQueue != null) {
             cleanupPilgrimQueue(r);
         }
         decrementChurchesToAllowBuildingIfNecessary(r);
@@ -390,7 +387,7 @@ public class Castle {
         }
 
         // TODO figure out when to intersperse building combat units
-        if (pilgrimLocationQueue != null && pickUnitToBuild(r) == r.SPECS.PILGRIM) {
+        if (r.turn > 5 && pilgrimLocationQueue != null && pickUnitToBuild(r) == r.SPECS.PILGRIM) {
             // 2. Build pilgrims if its our turn
             BuildAction action = buildPilgrimIfNeeded(r);
             if (action != null) {

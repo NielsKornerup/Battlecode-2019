@@ -41,11 +41,6 @@ public class KarbFuelTargetQueue {
         fuelQueue = computeResourceQueue(r, castleIdToResourceMap, enemyMap, fuelLocationsToConsider);
 
         karbQueue = computeResourceQueue(r, castleIdToResourceMap, enemyMap, karbLocationsToConsider);
-
-		r.log("" + Utils.myLocation(r));
-		for (Integer id : otherCastleLocations.keySet()) {
-			r.log("" + otherCastleLocations.get(id));
-		}
     }
 
 	private PriorityQueue computeResourceQueue(MyRobot r, HashMap<Integer, Navigation> castleIdToResourceMap,
