@@ -344,9 +344,9 @@ public class Castle {
     }
 
     public static boolean shouldRush(MyRobot r) {
-        // TODO CHANGE THIS CHANGE THIS CHANGE THIS CHANGE THIS
-        //return getMinDistBetweenTwoCastles(r) <= 20;
-        return false;
+        // TODO MAKE THIS A LOT BETTER
+        // Castles are close together and there's only 1 castle
+        return getMinDistBetweenTwoCastles(r) <= 15 && otherCastleLocations.size() == 0;
     }
 
     private static Action doRush(MyRobot r) {
