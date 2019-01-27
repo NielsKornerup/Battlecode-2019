@@ -345,7 +345,8 @@ public class Castle {
 
     public static boolean shouldRush(MyRobot r) {
         // TODO CHANGE THIS CHANGE THIS CHANGE THIS CHANGE THIS
-        return getMinDistBetweenTwoCastles(r) <= 20;
+        //return getMinDistBetweenTwoCastles(r) <= 20;
+        return false;
     }
 
     private static Action doRush(MyRobot r) {
