@@ -122,7 +122,7 @@ public class Lattice {
 		}
 		for (int i = 5; i < 5+totalInitialSpots; i++){
 			prophetLatticeLocations.set(i, initialSpots.dequeue().p);
-			r.log("X: "+prophetLatticeLocations.get(i).x+" Y: "+prophetLatticeLocations.get(i).y);
+			//r.log("X: "+prophetLatticeLocations.get(i).x+" Y: "+prophetLatticeLocations.get(i).y);
 		}
 	}
 

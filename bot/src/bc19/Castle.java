@@ -12,45 +12,19 @@ public class Castle {
     private static HashMap<Integer, Point> otherCastleLocations = new HashMap<>(); // Maps from unit ID to location
     private static ArrayList<Point> enemyCastleLocations = new ArrayList<>(); // Doesn't include the enemy castle that mirrors ours
 
-    private static int tick = 0; // Used to prevent one castle from building more than other castles
-    private static int tickMax = 1; // Threshold for building again
-
-    private static int buildTypeTick = 0;
-    private static final int UNIT_TYPE_MODULUS = 10;
-
-    private static int churchesToAllowBuilding = 0;
     private static KarbFuelTargetQueue pilgrimLocationQueue = null;
     private static Point mostContestedPoint = null; // Tracks the point closest to enemy that aggressive unit should go for
 
     private static Lattice lattice;
 
+    // Variables related to economy management
+    private static int churchesToAllowBuilding = 0;
     private static int numFirstTwoPilgrimsBuilt = 0;
+    private static int numCombatUnitsToSurviveRush = 2;
+    private static boolean waitingToBuildChurch = false;
 
-    public static int pickUnitToBuild(MyRobot r) {
-        // NOTE: THIS METHOD MUST OPERATE COMPLETELY DETERMINISTICALLY AND NOT BE BASED ON TURN #
-        if (Utils.getRobotsInRange(r, r.SPECS.PILGRIM, true, 0, 1000).size() >= 2
-                && Utils.getRobotsInRange(r, r.SPECS.PROPHET, true, 0, 1000).size() < 4) {
-            return r.SPECS.PROPHET;
-        }
-
-        int value = buildTypeTick % UNIT_TYPE_MODULUS;
-
-        if (value == 9 && churchesToAllowBuilding > 0) {
-            return r.SPECS.CHURCH;
-        }
-
-        if (pilgrimLocationQueue != null && pilgrimLocationQueue.isEmpty()) {
-            return r.SPECS.PROPHET;
-        }
-
-        if (value < 4) {
-            return r.SPECS.PROPHET;
-        } else if (value < 6) {
-            return r.SPECS.PILGRIM;
-        } else {
-            return r.SPECS.PROPHET;
-        }
-    }
+    private static int buildTurnTick = 0;
+    private static int MAX_BUILD_TURN_TICK = 1;
 
     public static void handleCastleLocationMessages(MyRobot r) {
         if (r.turn == 1) {
@@ -150,6 +124,17 @@ public class Castle {
     private static void handleCastleTalk(MyRobot r) {
         handleCastleLocationMessages(r);
         handleEnemyCastleKilledMessages(r);
+    }
+
+    private static double onePointFivedDistanceToEnemyLocation(MyRobot r, Point point) {
+        double smallestDistance = Constants.MAX_INT;
+        for (Point enemy : enemyCastleLocations) {
+            double dist = Math.pow(Utils.computeEuclideanDistance(point, enemy), 1.5);
+            if (dist < smallestDistance) {
+                smallestDistance = dist;
+            }
+        }
+        return smallestDistance;
     }
     
     private static boolean closestToEnemyCastle(MyRobot r) {
@@ -282,18 +267,18 @@ public class Castle {
 
     private static boolean pilgrimHadChanceToBuildChurch = false;
     private static void decrementChurchesToAllowBuildingIfNecessary(MyRobot r) {
-        // Check if currently trying to build churches
-        if (pickUnitToBuild(r) != r.SPECS.CHURCH) {
+        if (!waitingToBuildChurch) {
             return;
         }
 
+        // Check if currently trying to build churches
         if (!pilgrimHadChanceToBuildChurch
                 && r.fuel >= Utils.getSpecs(r, r.SPECS.CHURCH).CONSTRUCTION_FUEL
                 && r.karbonite >= Utils.getSpecs(r, r.SPECS.CHURCH).CONSTRUCTION_KARBONITE) {
             pilgrimHadChanceToBuildChurch = true;
         } else if (pilgrimHadChanceToBuildChurch && Utils.canBuild(r, r.SPECS.CHURCH)) {
             churchesToAllowBuilding--;
-            buildTypeTick++;
+            waitingToBuildChurch = false;
             pilgrimHadChanceToBuildChurch = false;
         } else {
             pilgrimHadChanceToBuildChurch = false;
@@ -302,7 +287,7 @@ public class Castle {
         for (Robot robot : r.getVisibleRobots()) {
             if (CastleTalkUtils.pilgrimDoneBuildingChurch(r, robot)) {
                 churchesToAllowBuilding--;
-                buildTypeTick++;
+                waitingToBuildChurch = false;
             }
         }
     }
@@ -358,45 +343,7 @@ public class Castle {
         return null;
     }
 
-    private static void calculateTickMax(MyRobot r) {
-        // Protect against rush
-        if (r.turn < Constants.TURN_THRESHOLD_PRIORITIZE_CLOSEST_CASTLE) {
-            // TODO make this weighted
-            tickMax = closestToEnemyCastle(r) ? 1 : otherCastleLocations.size() + 1;
-        } else {
-            tickMax = otherCastleLocations.size() + 1;
-        }
-    }
-
-    public static Action act(MyRobot r) {
-        removeDeadFriendlyCastles(r);
-        calculateTickMax(r);
-        if (r.turn > 5 && pilgrimLocationQueue != null) {
-            cleanupPilgrimQueue(r);
-        }
-        decrementChurchesToAllowBuildingIfNecessary(r);
-        updatePilgrimLocations(r);
-        handleCastleTalk(r);
-
-
-        // If it's close to the end of the game, and we're down Castles, send attack message!
-        /*if (r.turn >= Constants.ATTACK_TURN && r.turn % 50 == 0 && otherCastleLocations.size() + 1 < enemyCastleLocations.size()) {
-            r.log("It's late game... sending attack message.");
-            // TODO this propogates like a virus, which can waste fuel. Modify it to just send one global message
-            // TODO This involves making it save enough fuel late in the game which is why it hasn't been done yet
-            // Try to maximize our range
-            for (int i = 4; i > 0; i--) {
-                boolean sentSuccessfully = CommunicationUtils.sendAttackMessage(r, i * i);
-                if (sentSuccessfully) {
-                    break;
-                }
-            }
-        }*/
-
-        // Finish up broadcasting enemy castle location if needed. Commented in favor of telling where to go on lattice
-        // boolean alreadyBroadcastedLocation = broadcastEnemyCastleLocationIfNeeded(r);
-
-        // Build our initial 2 pilgrims for closest karb and fuel locations
+    private static Action buildFirstTwoPilgrims(MyRobot r) {
         if (numFirstTwoPilgrimsBuilt == 0) {
             // Build karb pilgrim
             Point closestKarbPoint = Utils.getClosestKarbonitePoint(r);
@@ -418,25 +365,153 @@ public class Castle {
             numFirstTwoPilgrimsBuilt++;
             return action;
         }
+        return null;
+    }
 
+    private static void calculateBuildTurnTickMax(MyRobot r) {
+        if (r.turn <= 5) {
+            MAX_BUILD_TURN_TICK = 1;
+        } else if (r.turn <= Constants.TURN_THRESHOLD_PRIORITIZE_CLOSE_CASTLES) {
+            // 1 castle: I have 1
+            // 2 castles: everyone has 2
+            // 3 castles: everyone has 3
+
+            // Distribute in weighted fashion based on distance to closest enemy castle
+            double sum = 0;
+
+            double myValue = onePointFivedDistanceToEnemyLocation(r, Utils.myLocation(r));
+            sum += myValue;
+            for (Point location : otherCastleLocations.values()) {
+                sum += onePointFivedDistanceToEnemyLocation(r, location);
+            }
+
+            int totalCastles = otherCastleLocations.size() + 1;
+            MAX_BUILD_TURN_TICK = (int) Math.round((myValue / sum) * totalCastles * totalCastles);
+
+            if (r.turn == 30) {
+                r.log("My tick is " + MAX_BUILD_TURN_TICK);
+            }
+        } else {
+            // Distribute evenly
+            MAX_BUILD_TURN_TICK = otherCastleLocations.size() + 1;
+        }
+    }
+
+    private static void computeCombatUnitsToSurviveRush(MyRobot r) {
+        int numEnemyProphets = Utils.getRobotsInRange(r, r.SPECS.PROPHET, false, 0, 1000).size();
+        int numEnemyPreachers = Utils.getRobotsInRange(r, r.SPECS.PREACHER, false, 0, 1000).size();
+        int numEnemyCrusaders = Utils.getRobotsInRange(r, r.SPECS.CRUSADER, false, 0, 1000).size();
+        int totalEnemyMilitary = numEnemyProphets + numEnemyPreachers + numEnemyCrusaders;
+        numCombatUnitsToSurviveRush = totalEnemyMilitary + 3;
+    }
+
+    private static void computeEconomyVariables(MyRobot r) {
+        calculateBuildTurnTickMax(r);
+        decrementChurchesToAllowBuildingIfNecessary(r);
+        computeCombatUnitsToSurviveRush(r);
+
+        // Allow for building a church
+        if (r.turn % 10 == 9 && churchesToAllowBuilding > 0) {
+            waitingToBuildChurch = true;
+        }
+    }
+
+    private static BuildAction buildCrusader(MyRobot r) {
+        if (Utils.canBuild(r, r.SPECS.CRUSADER) && buildTurnTick < MAX_BUILD_TURN_TICK) {
+            buildTurnTick++;
+        }
+
+        if (buildTurnTick < MAX_BUILD_TURN_TICK) {
+            return null;
+        }
+
+        BuildAction action = Utils.tryAndBuildInOptimalSpace(r, r.SPECS.CRUSADER);
+        if (action != null) {
+            Point crusaderLocation = lattice.popCrusaderLatticeLocation();
+            if (crusaderLocation != null) {
+                CommunicationUtils.sendTurtleLocation(r, crusaderLocation);
+                buildTurnTick = 0;
+                return action;
+            } else {
+                r.log("Not spawning crusader because nowhere to send it.");
+            }
+        }
+
+        return null;
+    }
+
+    private static BuildAction buildProphet(MyRobot r) {
+        if (Utils.canBuild(r, r.SPECS.PROPHET) && buildTurnTick < MAX_BUILD_TURN_TICK) {
+            buildTurnTick++;
+        }
+
+        if (buildTurnTick < MAX_BUILD_TURN_TICK) {
+            return null;
+        }
+
+        BuildAction action = Utils.tryAndBuildInOptimalSpace(r, r.SPECS.PROPHET);
+        if (action != null) {
+            Point prophetLocation = lattice.popProphetLatticeLocation();
+            if (prophetLocation != null) {
+                CommunicationUtils.sendTurtleLocation(r, prophetLocation);
+                buildTurnTick = 0;
+                return action;
+            } else {
+                r.log("Not spawning prophet because nowhere to send it.");
+            }
+        }
+        return null;
+    }
+
+    public static Action act(MyRobot r) {
+        removeDeadFriendlyCastles(r);
+        if (r.turn > 5 && pilgrimLocationQueue != null) {
+            cleanupPilgrimQueue(r);
+        }
+        computeEconomyVariables(r);
+        updatePilgrimLocations(r);
+        handleCastleTalk(r);
+
+        // 0. Build first two pilgrims
+        Action buildAction = buildFirstTwoPilgrims(r);
+        if (buildAction != null) {
+            return buildAction;
+        }
+
+        // 1A. Rush if we've determined we want rush bot
         if (shouldRush(r)) {
             return doRush(r);
         }
 
-        // TODO figure out when to intersperse building combat units
-        if (r.turn > 5 && pilgrimLocationQueue != null && pickUnitToBuild(r) == r.SPECS.PILGRIM) {
-            // 2. Build pilgrims if its our turn
-            BuildAction action = buildPilgrimIfNeeded(r);
+        // 1B. Build combat units to survive rush
+        int numFriendlyProphets = Utils.getRobotsInRange(r, r.SPECS.PROPHET, true, 0, 81).size();
+        if (numFriendlyProphets < numCombatUnitsToSurviveRush && lattice != null) { // TODO lattice != null here slows us down
+            BuildAction action = buildProphet(r);
             if (action != null) {
-                buildTypeTick++;
                 return action;
             }
         }
 
-        // 1. If we haven't built any aggressive scout units yet, build them.
-        if (Utils.getRobotsInRange(r, r.SPECS.PROPHET, true, 0, 1000).size() >= 4
-                && mostContestedPoint != null
-                && initialAggressiveScoutUnitsBuilt < Constants.NUM_AGGRESSIVE_SCOUT_UNITS_TO_BUILD) {
+        // TODO move to appropriate spot
+        // Don't spawn units if waiting to build church
+        if (waitingToBuildChurch) {
+            AttackAction attackAction = Utils.tryAndAttack(r, Constants.CASTLE_ATTACK_RADIUS_SQ);
+            if (attackAction != null) {
+                return attackAction;
+            }
+            return null;
+        }
+
+        // 2. Build remaining pilgrims
+        if (r.turn > 5 && pilgrimLocationQueue != null && !pilgrimLocationQueue.isEmpty()) {
+            BuildAction action = buildPilgrimIfNeeded(r);
+            if (action != null) {
+                return action;
+            }
+        }
+
+        // 3. Build aggressive scouts
+        if (mostContestedPoint != null && initialAggressiveScoutUnitsBuilt < Constants.NUM_AGGRESSIVE_SCOUT_UNITS_TO_BUILD) {
             Point toGo = Utils.getNonResourceSpotAround(r, mostContestedPoint);
             if (toGo != null) {
                 BuildAction action = Utils.tryAndBuildInOptimalSpace(r, r.SPECS.PROPHET);
@@ -450,55 +525,22 @@ public class Castle {
             }
         }
 
-        // 3. Spam crusaders at end of game
+        // 4. Spam crusaders if end game
         if (r.turn > Constants.CASTLE_SPAM_CRUSADERS_TURN_THRESHOLD) {
             if (r.turn < Constants.FUEL_CAP_TURN_THRESHOLD || r.fuel > Constants.FUEL_CAP) {
-                BuildAction action = Utils.tryAndBuildInOptimalSpace(r, r.SPECS.CRUSADER);
+                BuildAction action = buildCrusader(r);
                 if (action != null) {
-                    Point crusaderLocation = lattice.popCrusaderLatticeLocation();
-                    if (crusaderLocation != null) {
-                        CommunicationUtils.sendTurtleLocation(r, crusaderLocation);
-                        return action;
-                    } else {
-                        r.log("Not spawning crusader because nowhere to send it.");
-                    }
-                    /*
-                    enemyCastleLocationIndex = 1;
-                    if (!alreadyBroadcastedLocation) {
-                        broadcastEnemyCastleLocationIfNeeded(r);
-                    }
-                    */
+                    return action;
                 }
             }
         }
 
-        // 4. Build a prophet.
-        if (pickUnitToBuild(r) == r.SPECS.PROPHET && lattice != null) {
+        // 5. Contribute to prophet turtle
+        if (lattice != null) {
             if (r.turn < Constants.FUEL_CAP_TURN_THRESHOLD || r.fuel > Constants.FUEL_CAP) {
-                // TODO ignore the tick if in emergency (i.e. enemy military is approaching)
-                // TODO prioritize the castle closer to the enemy at the beginning of the game
-                // Increment tick when we have the opportunity to build
-                if (Utils.canBuild(r, r.SPECS.PROPHET) && tick < tickMax) {
-                    tick++;
-                }
-                if (tick >= tickMax) {
-                    BuildAction action = Utils.tryAndBuildInOptimalSpace(r, r.SPECS.PROPHET);
-                    if (action != null) {
-                    /* Commented out for now in favor of telling it where to go on the lattice
-                        enemyCastleLocationIndex = 1;
-                    /*if (!alreadyBroadcastedLocation) {
-                        broadcastEnemyCastleLocationIfNeeded(r);
-                    }*/
-                        Point prophetLocation = lattice.popProphetLatticeLocation();
-                        if (prophetLocation != null) {
-                            tick = 0;
-                            CommunicationUtils.sendTurtleLocation(r, prophetLocation);
-                            buildTypeTick++;
-                            return action;
-                        } else {
-                            r.log("Not spawning prophet because nowhere to send it.");
-                        }
-                    }
+                BuildAction action = buildProphet(r);
+                if (action != null) {
+                    return action;
                 }
             }
         }
