@@ -82,9 +82,7 @@ public class Preacher {
             if (CommunicationUtils.receivedTurtleLocation(r, robot)) {
                 ArrayList<Point> targets = new ArrayList<>();
                 targets.add(CommunicationUtils.getTurtleLocation(r, robot));
-                if(r.me.turn > 10) {
-                    r.log("new Preacher target " + targets.get(0).toString());
-                }
+                r.log("My turn is " + r.turn + " and new Preacher target " + targets.get(0).toString());
                 enemyCastleMap = new Navigation(r, r.getPassableMap(), targets);
                 break;
             }

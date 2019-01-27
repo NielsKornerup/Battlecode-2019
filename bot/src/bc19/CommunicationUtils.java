@@ -48,7 +48,7 @@ public class CommunicationUtils {
 	}
 	
 	public static boolean receivedTurtleLocation(MyRobot r, Robot other) {
-		return (r.me.team == other.team && r.isRadioing(other) && instructionMatches(TURTLE_MASK, other.signal));
+		return (r.isRadioing(other) && instructionMatches(TURTLE_MASK, other.signal));
 	}
 
 	public static Point getAggressiveScoutLocation(MyRobot r, Robot other) {

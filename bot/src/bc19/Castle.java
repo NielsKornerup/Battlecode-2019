@@ -341,7 +341,6 @@ public class Castle {
     private static Action doRush(MyRobot r) {
         if (castleKilled) {
             // TODO : reduce this radius size
-            r.log("Castle killed so sending global new target location " + getClosestOtherCastleLocation(r).toString() + " distance " + r.karboniteMap.length);
             CommunicationUtils.sendTurtleLocation(r, getClosestOtherCastleLocation(r), r.karboniteMap.length);
         }
 
