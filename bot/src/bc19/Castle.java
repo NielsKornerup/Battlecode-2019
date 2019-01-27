@@ -324,9 +324,28 @@ public class Castle {
         return loc;
     }
 
-    public static boolean rushLikeAMothaFucka(MyRobot r) {
+    private static int getMinDistBetweenTwoCastles(MyRobot r) {
+        ArrayList<Point> friendlyCastleLocs = new ArrayList<>();
+        friendlyCastleLocs.add(Utils.myLocation(r));
+        for (Integer id : otherCastleLocations.keySet()) {
+            friendlyCastleLocs.add(otherCastleLocations.get(id));
+        }
+
+        int minDist = Constants.MAX_INT;
+        for (Point friendly : friendlyCastleLocs) {
+            for (Point enemy : enemyCastleLocations) {
+                int distance = Utils.computeManhattanDistance(friendly, enemy);
+                if (distance < minDist) {
+                    minDist = distance;
+                }
+            }
+        }
+        return minDist;
+    }
+
+    public static boolean shouldRush(MyRobot r) {
         // TODO CHANGE THIS CHANGE THIS CHANGE THIS CHANGE THIS
-        return r.me.team == 0;
+        return getMinDistBetweenTwoCastles(r) <= 20;
     }
 
     private static Action doRush(MyRobot r) {
@@ -393,7 +412,7 @@ public class Castle {
             return action;
         }
 
-        if (rushLikeAMothaFucka(r)) {
+        if (shouldRush(r)) {
             return doRush(r);
         }
 
@@ -447,7 +466,7 @@ public class Castle {
         }
 
         // 4. Build a prophet.
-        if (pickUnitToBuild(r) == r.SPECS.PROPHET) {
+        if (pickUnitToBuild(r) == r.SPECS.PROPHET && lattice != null) {
             if (r.turn < Constants.FUEL_CAP_TURN_THRESHOLD || r.fuel > Constants.FUEL_CAP) {
                 // TODO ignore the tick if in emergency (i.e. enemy military is approaching)
                 // TODO prioritize the castle closer to the enemy at the beginning of the game
