@@ -513,6 +513,36 @@ public class Utils {
         return getClosestKarbonitePoint(r, Utils.myLocation(r));
     }
 
+    /*
+    Returns the two closest Karbonite points, if they are close to each other. Otherwise returns just the closest.
+     */
+    public static List<Point> getClosestKarbonitePoints(MyRobot r, Point point) {
+        List<Point> karbPoints = getKarbonitePoints(r);
+        int bestDist = Constants.MAX_INT;
+        Point closest = null;
+        int secondBestDist = Constants.MAX_INT;
+        Point secondClosest = null;
+        for (Point kp : karbPoints) {
+            int dist = computeManhattanDistance(point, kp);
+            if (dist < bestDist) {
+                secondBestDist = bestDist;
+                secondClosest = closest;
+
+                bestDist = dist;
+                closest = kp;
+            } else if (dist < secondBestDist) {
+                secondBestDist = dist;
+                secondClosest = kp;
+            }
+        }
+        List<Point> closestPoints = new ArrayList<>();
+        closestPoints.add(closest);
+        if (Utils.computeEuclideanDistance(point, secondClosest) <= 5) {
+            closestPoints.add(secondClosest);
+        }
+        return closestPoints;
+    }
+
     public static Point getClosestFuelPoint(MyRobot r, Point point) {
         List<Point> fuelPoints = getFuelPoints(r);
         int bestDist = Constants.MAX_INT;
