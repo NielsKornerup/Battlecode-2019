@@ -57,8 +57,17 @@ public class Preacher {
             return attackAction;
         }
 
+        if(!nearOtherPreachers(r)) {
+            return null;
+        }
+
         // 2. Move towards aggression point
         return Utils.moveDijkstraThenRandom(r, enemyCastleMap, 2);
+    }
+
+    private static boolean nearOtherPreachers(MyRobot r) {
+        List<Robot> closePreachers = Utils.getRobotsInRange(r, r.SPECS.PREACHER, true, 0, 3);
+        return closePreachers.size() > 0;
     }
 
     private static void doCrusaderInitialization(MyRobot r) {
