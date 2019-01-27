@@ -10,8 +10,10 @@ public class KarbFuelTargetQueue {
     private PriorityQueue fuelQueue = null;
     private int counter = 0;
     private Point mostContestedPoint = null;
-    
+	private HashMap<Integer, Point> otherCastleLocations = null;
+
     public KarbFuelTargetQueue(MyRobot r, HashMap<Integer, Point> otherCastleLocations, List<Point> enemyCastleLocations) {
+		this.otherCastleLocations = otherCastleLocations;
         HashMap<Integer, Navigation> castleIdToResourceMap = new HashMap<>();
         for (Integer id : otherCastleLocations.keySet()) {
             ArrayList<Point> targets = new ArrayList<>();
@@ -39,6 +41,11 @@ public class KarbFuelTargetQueue {
         fuelQueue = computeResourceQueue(r, castleIdToResourceMap, enemyMap, fuelLocationsToConsider);
 
         karbQueue = computeResourceQueue(r, castleIdToResourceMap, enemyMap, karbLocationsToConsider);
+
+		r.log("" + Utils.myLocation(r));
+		for (Integer id : otherCastleLocations.keySet()) {
+			r.log("" + otherCastleLocations.get(id));
+		}
     }
 
 	private PriorityQueue computeResourceQueue(MyRobot r, HashMap<Integer, Navigation> castleIdToResourceMap,
@@ -46,6 +53,26 @@ public class KarbFuelTargetQueue {
 		PriorityQueue toReturn = new PriorityQueue();
         double smallestContestedSpread = 1000000000;
         for (Point point : locationsToConsider) {
+
+			// Check if the point is either the closest Karbonite or closest Fuel point to one of the castles.
+			// Exclude it if so, because those pilgrims will have already spawned
+			boolean isCloseFuelPoint = point.equals(Utils.getClosestFuelPoint(r));
+			boolean isCloseKarbPoint = point.equals(Utils.getClosestKarbonitePoint(r));
+
+			//r.log(Utils.getClosestKarbonitePoint(r) + " " + Utils.getClosestFuelPoint(r));
+			for (Integer id : otherCastleLocations.keySet()) {
+				Point other = otherCastleLocations.get(id);
+				if (point.equals(Utils.getClosestKarbonitePoint(r, other))) {
+					isCloseKarbPoint = true;
+				}
+				if (point.equals(Utils.getClosestFuelPoint(r, other))) {
+					isCloseFuelPoint = true;
+				}
+				//r.log(Utils.getClosestKarbonitePoint(r, other) + " " + Utils.getClosestFuelPoint(r, other));
+			}
+			if (isCloseFuelPoint || isCloseKarbPoint) {
+				continue;
+			}
 
             // Find the Castle ID with smallest potential
             int smallestId = -1;

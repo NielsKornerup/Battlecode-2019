@@ -24,7 +24,7 @@ public class Castle {
 
     private static Lattice lattice;
 
-    private static int rushPilgrimCount = 0;
+    private static int numFirstTwoPilgrimsBuilt = 0;
 
     public static int pickUnitToBuild(MyRobot r) {
         // NOTE: THIS METHOD MUST OPERATE COMPLETELY DETERMINISTICALLY AND NOT BE BASED ON TURN #
@@ -85,7 +85,7 @@ public class Castle {
 
             // Rebroadcast our Y coordinate (since it's expired as we intercepted it)
             CastleTalkUtils.sendCastleCoord(r, r.me.y);
-
+        } else if (r.turn == 5) {
             // Remove our entry (in case we read our own broadcast)
             otherCastleLocations.remove(r.me.id);
 
@@ -101,59 +101,6 @@ public class Castle {
             churchesToAllowBuilding = computeNumChurchesToAllowBuilding(r, pilgrimLocationQueue.getAllCastlePilgrimBuildLocations());
             mostContestedPoint = pilgrimLocationQueue.getMostContestedPoint();
         }
-    }
-
-    private static PriorityQueue generatePilgrimLocationQueue(MyRobot r, HashMap<Integer, Point> otherCastleLocations) {
-        HashMap<Integer, Navigation> castleIdToResourceMap = new HashMap<>();
-        for (Integer id : otherCastleLocations.keySet()) {
-            ArrayList<Point> targets = new ArrayList<>();
-            targets.add(otherCastleLocations.get(id));
-            Navigation map = new Navigation(r, r.getPassableMap(), targets);
-            castleIdToResourceMap.put(id, map);
-        }
-
-        // Add enemy castle map
-        ArrayList<Point> enemyTargets = new ArrayList<>();
-        for (Point point : enemyCastleLocations) {
-            enemyTargets.add(point);
-        }
-        Navigation enemyMap = new Navigation(r, r.getPassableMap(), enemyTargets);
-
-        ArrayList<Point> myPosition = new ArrayList<>();
-        myPosition.add(Utils.myLocation(r));
-        Navigation myMap = new Navigation(r, r.getPassableMap(), myPosition);
-        castleIdToResourceMap.put(r.me.id, myMap);
-
-        List<Point> resourceLocationsToConsider = Utils.getKarbonitePoints(r);
-        resourceLocationsToConsider.addAll(Utils.getFuelPoints(r));
-
-        PriorityQueue pilgrimLocationQueue = new PriorityQueue();
-        for (Point point : resourceLocationsToConsider) {
-
-            // Find the Castle ID with smallest potential
-            int smallestId = -1;
-            int smallestValue = 1000000;
-            int multiplier = 5153;
-            for (Integer id : castleIdToResourceMap.keySet()) {
-                Navigation map = castleIdToResourceMap.get(id);
-                int value = map.getPotential(point) * multiplier + (id % multiplier);
-                if (value < smallestValue) {
-                    smallestId = id;
-                    smallestValue = value;
-                }
-            }
-
-            if (enemyMap.getPotential(point) * multiplier * 1.2 < smallestValue) {
-                continue;
-            }
-
-            if (smallestId == r.me.id) {
-                pilgrimLocationQueue.enqueue(new Node(smallestValue, point));
-            } else {
-                pilgrimLocationQueue.enqueue(new Node(smallestValue, new Point(-1, smallestId)));
-            }
-        }
-        return pilgrimLocationQueue;
     }
 
     private static void handleEnemyCastleKilledMessages(MyRobot r) {
@@ -380,26 +327,12 @@ public class Castle {
         return loc;
     }
 
-    public static boolean rushLikeAMothaFucka() {
-        return true;
+    public static boolean rushLikeAMothaFucka(MyRobot r) {
+        // TODO CHANGE THIS CHANGE THIS CHANGE THIS CHANGE THIS
+        return r.me.team == 0;
     }
 
     private static Action doRush(MyRobot r) {
-        // NEED TO SPAWN ONLY 2-4 PILGRIMS THEN ONLY SPAWN PREACHERS
-        Point closestKarbPoint = Utils.getClosestKarbonitePoint(r);
-        Point closestFuelPoint = Utils.getClosestFuelPoint(r);
-        if (rushPilgrimCount == 0) {
-            CommunicationUtils.sendPilgrimTargetMessage(r, closestKarbPoint, CommunicationUtils.PILGRIM_TARGET_RADIUS_SQ);
-            BuildAction action = Utils.tryAndBuildInOptimalSpace(r, r.SPECS.PILGRIM);
-            rushPilgrimCount++;
-            return action;
-        }
-        if (rushPilgrimCount == 1) {
-            CommunicationUtils.sendPilgrimTargetMessage(r, closestFuelPoint, CommunicationUtils.PILGRIM_TARGET_RADIUS_SQ);
-            BuildAction action = Utils.tryAndBuildInOptimalSpace(r, r.SPECS.PILGRIM);
-            rushPilgrimCount++;
-            return action;
-        }
         BuildAction action = Utils.tryAndBuildInOptimalSpace(r, r.SPECS.PREACHER);
         if (action != null) {
             CommunicationUtils.sendTurtleLocation(r, getClosestOtherCastleLocation(r));
@@ -417,12 +350,9 @@ public class Castle {
         updatePilgrimLocations(r);
         handleCastleTalk(r);
 
-        if (rushLikeAMothaFucka()) {
-            return doRush(r);
-        }
 
         // If it's close to the end of the game, and we're down Castles, send attack message!
-        if (r.turn >= Constants.ATTACK_TURN && r.turn % 50 == 0 && otherCastleLocations.size() + 1 < enemyCastleLocations.size()) {
+        /*if (r.turn >= Constants.ATTACK_TURN && r.turn % 50 == 0 && otherCastleLocations.size() + 1 < enemyCastleLocations.size()) {
             r.log("It's late game... sending attack message.");
             // TODO this propogates like a virus, which can waste fuel. Modify it to just send one global message
             // TODO This involves making it save enough fuel late in the game which is why it hasn't been done yet
@@ -433,15 +363,34 @@ public class Castle {
                     break;
                 }
             }
-        }
+        }*/
 
         // Finish up broadcasting enemy castle location if needed. Commented in favor of telling where to go on lattice
         // boolean alreadyBroadcastedLocation = broadcastEnemyCastleLocationIfNeeded(r);
 
-        // 1. If we haven't built any aggressive scout units yet, build them.
+        // Build our initial 2 pilgrims for closest karb and fuel locations
+        if (numFirstTwoPilgrimsBuilt == 0) {
+            // Build karb pilgrim
+            Point closestKarbPoint = Utils.getClosestKarbonitePoint(r);
+            CommunicationUtils.sendPilgrimTargetMessage(r, closestKarbPoint, CommunicationUtils.PILGRIM_TARGET_RADIUS_SQ);
+            BuildAction action = Utils.tryAndBuildInDirectionOf(r, closestKarbPoint, r.SPECS.PILGRIM);
+            numFirstTwoPilgrimsBuilt++;
+            return action;
+        } else if (numFirstTwoPilgrimsBuilt == 1) {
+            // Build fuel pilgrim
+            Point closestFuelPoint = Utils.getClosestFuelPoint(r);
+            CommunicationUtils.sendPilgrimTargetMessage(r, closestFuelPoint, CommunicationUtils.PILGRIM_TARGET_RADIUS_SQ);
+            BuildAction action = Utils.tryAndBuildInDirectionOf(r, closestFuelPoint, r.SPECS.PILGRIM);
+            numFirstTwoPilgrimsBuilt++;
+            return action;
+        }
+
+        if (rushLikeAMothaFucka(r)) {
+            return doRush(r);
+        }
 
         // TODO figure out when to intersperse building combat units
-        if (r.turn > 5 && pickUnitToBuild(r) == r.SPECS.PILGRIM) { // TODO hardcoded constant
+        if (pilgrimLocationQueue != null && pickUnitToBuild(r) == r.SPECS.PILGRIM) {
             // 2. Build pilgrims if its our turn
             BuildAction action = buildPilgrimIfNeeded(r);
             if (action != null) {
@@ -450,6 +399,7 @@ public class Castle {
             }
         }
 
+        // 1. If we haven't built any aggressive scout units yet, build them.
         if (mostContestedPoint != null && initialAggressiveScoutUnitsBuilt < Constants.NUM_AGGRESSIVE_SCOUT_UNITS_TO_BUILD) {
             Point toGo = Utils.getNonResourceSpotAround(r, mostContestedPoint);
             if (toGo != null) {

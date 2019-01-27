@@ -491,13 +491,13 @@ public class Utils {
         return targets;
     }
 
-    public static Point getClosestKarbonitePoint(MyRobot r) {
-        Point myLoc = new Point(r.me.x, r.me.y);
+    public static Point getClosestKarbonitePoint(MyRobot r, Point point) {
         List<Point> karbPoints = getKarbonitePoints(r);
         int bestDist = Constants.MAX_INT;
         Point closest = null;
         for(Point kp : karbPoints) {
-            int dist = computeManhattanDistance(myLoc, kp);
+            // TODO ensure that this is deterministic with how ties work
+            int dist = computeManhattanDistance(point, kp);
             if(dist < bestDist) {
                 bestDist = dist;
                 closest = kp;
@@ -509,13 +509,17 @@ public class Utils {
         return closest;
     }
 
-    public static Point getClosestFuelPoint(MyRobot r) {
-        Point myLoc = new Point(r.me.x, r.me.y);
+    public static Point getClosestKarbonitePoint(MyRobot r) {
+        return getClosestKarbonitePoint(r, Utils.myLocation(r));
+    }
+
+    public static Point getClosestFuelPoint(MyRobot r, Point point) {
         List<Point> fuelPoints = getFuelPoints(r);
         int bestDist = Constants.MAX_INT;
         Point closest = null;
         for(Point fp : fuelPoints) {
-            int dist = computeManhattanDistance(myLoc, fp);
+            // TODO ensure that this is deterministic with how ties work
+            int dist = computeManhattanDistance(point, fp);
             if(dist < bestDist) {
                 bestDist = dist;
                 closest = fp;
@@ -525,6 +529,10 @@ public class Utils {
             r.log("found no fuel points");
         }
         return closest;
+    }
+
+    public static Point getClosestFuelPoint(MyRobot r) {
+        return getClosestFuelPoint(r, Utils.myLocation(r));
     }
 
     public static Point getContestedKarboniteGuardPoint(MyRobot r){
