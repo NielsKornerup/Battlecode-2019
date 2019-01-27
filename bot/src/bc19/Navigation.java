@@ -133,6 +133,31 @@ public class Navigation {
     public Navigation(MyRobot r, boolean[][] passableMap, List<Point> targets) {
         this(r, passableMap, targets, Integer.MAX_VALUE);
     }
+    
+    public Navigation(MyRobot r, boolean[][] passableMap, List<Point> targets, boolean[][] karbMap, boolean[][] fuelMap){
+    	Point myCastle = Utils.getSpawningCastleOrChurchLocation(r);
+    	
+    	for (int y = 0; y < karbMap.length; y++){
+    		for (int x = 0; x < karbMap[0].length; x++){
+    			boolean onLattice = false;
+    			if ((r.me.x + r.me.y + 200) % 2 == (myCastle.x + myCastle.y) % 2 && Utils.computeManhattanDistance(new Point(x,y),myCastle)>2){
+    				onLattice = true;
+    			}
+    			if (karbMap[y][x] || fuelMap[y][x]){
+    				passableMap[y][x] = false;
+    			}
+    		}
+    	}
+    	
+    	
+    	this.r = r;
+        this.passableMap = passableMap;
+        this.maxDistance = Integer.MAX_VALUE;
+        this.distances = new int[passableMap.length][passableMap[0].length];
+        this.targets = targets;
+        recalculateDistanceMap();
+    	
+    }
 
 
     /**

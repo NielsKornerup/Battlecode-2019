@@ -36,7 +36,8 @@ public class Prophet {
         for (Point location : otherEnemyCastleLocations.keySet()) {
             targets.add(location);
         }
-        enemyCastleMap = new Navigation(r, r.getPassableMap(), targets);
+        //enemyCastleMap = new Navigation(r, r.getPassableMap(), targets);
+        enemyCastleMap = new Navigation(r, r.getPassableMap(), targets, r.getKarboniteMap(), r.getFuelMap());
     }
 
     private static void getEnemyCastleLocations(MyRobot r) {
@@ -84,7 +85,7 @@ public class Prophet {
                 // Set Dijkstra map to just go to that area
                 ArrayList<Point> targets = new ArrayList<>();
                 targets.add(CommunicationUtils.getAggressiveScoutLocation(r, robot));
-                enemyCastleMap = new Navigation(r, r.getPassableMap(), targets);
+                enemyCastleMap = new Navigation(r, r.getPassableMap(), targets, r.getKarboniteMap(), r.getFuelMap());
                 break;
             }
         }
@@ -98,7 +99,7 @@ public class Prophet {
                 // Set Dijkstra map to just go to that area
                 ArrayList<Point> targets = new ArrayList<>();
                 targets.add(CommunicationUtils.getTurtleLocation(r, robot));
-                enemyCastleMap = new Navigation(r, r.getPassableMap(), targets);
+                enemyCastleMap = new Navigation(r, r.getPassableMap(), targets, r.getKarboniteMap(), r.getFuelMap());
                 break;
             }
         }

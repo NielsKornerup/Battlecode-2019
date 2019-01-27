@@ -56,10 +56,10 @@ public class Utils {
     }
 
     public static AttackAction tryAndAttack(MyRobot r, int attackRadiusSq) {
-        List<RobotSort> enemiesNearby = Utils.getRobotSortInRange(r, false, 0, attackRadiusSq);
+        List<Point> enemiesNearby = Utils.getRobotSortInRange(r, false, 0, attackRadiusSq);
         if (enemiesNearby.size() > 0) {
             // Attack the enemy with highest priority
-            for (RobotSort target : enemiesNearby) {
+            for (Point target : enemiesNearby) {
             	Point attackPoint = new Point(target.x - r.me.x, target.y - r.me.y);
                 if (Utils.canAttack(r, attackPoint)) {
                     return r.attack(attackPoint.x, attackPoint.y);
@@ -322,7 +322,7 @@ public class Utils {
         return deltas;
     }
 
-    public static List<RobotSort> getRobotSortInRange(MyRobot r, boolean myTeam, int minRadiusSq, int maxRadiusSq) {
+    public static List<Point> getRobotSortInRange(MyRobot r, boolean myTeam, int minRadiusSq, int maxRadiusSq) {
         List<Robot> nearby = getRobotsInRange(r, -1, myTeam, minRadiusSq, maxRadiusSq);
         List<RobotSort> toSort = new ArrayList<>();
         for (Robot robot : nearby) {
@@ -331,8 +331,18 @@ public class Utils {
             toSort.add(rob);
         }
         // TODO Collections.sort might not work
-        Collections.sort(toSort);
-        return toSort;
+        //Collections.sort(toSort);
+        PriorityQueue sorter = new PriorityQueue();
+        ArrayList<Point> enemyPriority = new ArrayList<Point>();
+        for (RobotSort rob : toSort){
+        	Point space = new Point(rob.x, rob.y);
+        	sorter.enqueue(new Node(RobotSort.getScore(rob),space));
+        }
+        for (int i = 0; i < toSort.size(); i++){
+        	enemyPriority.add(sorter.dequeue().p);
+        }
+        
+        return enemyPriority;
     }
 
     public static ArrayList<Point> getAdjacentFreeSpaces(MyRobot r) {

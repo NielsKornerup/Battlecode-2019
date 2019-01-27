@@ -15,7 +15,7 @@ public class Lattice {
 	private ArrayList<Point> prophetLatticeLocations = new ArrayList<>();
 	private ArrayList<Point> crusaderLatticeLocations = new ArrayList<>();
 	private int crusaderUnitIndex = 0;
-	private int prophetUnitIndex = 6; // Starts at 6 to start far away from Castle
+	private int prophetUnitIndex = 5; // Starts at 6 to start far away from Castle
 
 	public Lattice(MyRobot r, HashMap<Integer, Point> otherCastleLocations, ArrayList<Point> enemyCastleLocations) {
 		this.r = r;
@@ -83,38 +83,46 @@ public class Lattice {
         	}
         	*/
 			Point mapLoc = new Point(myLoc.x + dx, myLoc.y + dy);
-
+			boolean isFriendlyDomain = false;
 			for (Point otherCastleLoc : otherCastleLocations.values()) {
 				if (Utils.computeManhattanDistance(myLoc, mapLoc) > Utils.computeManhattanDistance(otherCastleLoc, mapLoc)) {
-					continue;
+					isFriendlyDomain = true;
 				}
 
 			}
-
+			if (isFriendlyDomain){
+				break;
+			}
+			//r.log("X: "+dx+" Y: "+dy);
 			if (mapLoc.x >= 0 && mapLoc.x < passableMap[0].length && mapLoc.y >= 0 && mapLoc.y < passableMap.length
 					&& passableMap[mapLoc.y][mapLoc.x] && !karbMap[mapLoc.y][mapLoc.x] && !fuelMap[mapLoc.y][mapLoc.x]) {
-				if ((dx + dy + 200) % 2 == (myLoc.x + myLoc.y) % 2) {
+				if ((mapLoc.x + mapLoc.y) % 2 == (myLoc.x + myLoc.y) % 2) {
 					prophetLatticeLocations.add(mapLoc);
 				} else {
 					crusaderLatticeLocations.add(0, mapLoc);
 				}
 
-				//r.log("X: "+mapLoc.x+" Y: "+mapLoc.y);
+				
 			}
 		}
 		//Collections.reverse(crusaderLatticeLocations);
-		crusaderUnitIndex = crusaderLatticeLocations.size() - 80;
+		crusaderUnitIndex = crusaderLatticeLocations.size() - 70;
+		if (crusaderUnitIndex < 0){
+			r.log("IN A CORNER************************");
+			crusaderUnitIndex = 0;
+		}
 		
 		//reorder the first X elements of the prophet lattice to build closer to the enemy first
 		PriorityQueue initialSpots = new PriorityQueue();
-		int totalInitialSpots = 13;
-		for (int i = 6; i < 6+totalInitialSpots; i++){
+		int totalInitialSpots = 36;
+		for (int i = 5; i < 5+totalInitialSpots; i++){
 			Point temp = prophetLatticeLocations.get(i);
 			int dist = Utils.computeManhattanDistance(temp, Utils.getMirroredPosition(r, new Point(r.me.x, r.me.y)));
 			initialSpots.enqueue(new Node(dist, temp));
 		}
-		for (int i = 6; i < 6+totalInitialSpots; i++){
+		for (int i = 5; i < 5+totalInitialSpots; i++){
 			prophetLatticeLocations.set(i, initialSpots.dequeue().p);
+			r.log("X: "+prophetLatticeLocations.get(i).x+" Y: "+prophetLatticeLocations.get(i).y);
 		}
 	}
 

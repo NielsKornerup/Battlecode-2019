@@ -62,4 +62,12 @@ public class RobotSort implements Comparable<RobotSort> {
 		}
 	}
 	
+	public static int getScore(RobotSort r){
+		int value = getPriority(r.unit);
+		value*=10000;
+		value+=r.hp*1000;
+		value+=r.dist;
+		return value;
+	}
+	
 }
