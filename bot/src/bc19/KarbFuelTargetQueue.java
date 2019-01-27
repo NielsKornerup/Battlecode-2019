@@ -51,19 +51,18 @@ public class KarbFuelTargetQueue {
 
 			// Check if the point is either the closest Karbonite or closest Fuel point to one of the castles.
 			// Exclude it if so, because those pilgrims will have already spawned
-			boolean isCloseFuelPoint = point.equals(Utils.getClosestFuelPoint(r));
-			boolean isCloseKarbPoint = point.equals(Utils.getClosestKarbonitePoint(r));
-
-			//r.log(Utils.getClosestKarbonitePoint(r) + " " + Utils.getClosestFuelPoint(r));
+			List<Point> closeKarbPoints = Utils.getClosestKarbonitePoints(r, Utils.myLocation(r));
+			boolean isCloseKarbPoint = closeKarbPoints.contains(point);
+			boolean isCloseFuelPoint = closeKarbPoints.size() < 2 && point.equals(Utils.getClosestFuelPoint(r));
 			for (Integer id : otherCastleLocations.keySet()) {
 				Point other = otherCastleLocations.get(id);
-				if (point.equals(Utils.getClosestKarbonitePoint(r, other))) {
+				List<Point> otherCloseKarbPoints = Utils.getClosestKarbonitePoints(r, other);
+				if (otherCloseKarbPoints.contains(point)) {
 					isCloseKarbPoint = true;
 				}
-				if (point.equals(Utils.getClosestFuelPoint(r, other))) {
+				if (otherCloseKarbPoints.size() < 2 && point.equals(Utils.getClosestFuelPoint(r, other))) {
 					isCloseFuelPoint = true;
 				}
-				//r.log(Utils.getClosestKarbonitePoint(r, other) + " " + Utils.getClosestFuelPoint(r, other));
 			}
 			if (isCloseFuelPoint || isCloseKarbPoint) {
 				continue;

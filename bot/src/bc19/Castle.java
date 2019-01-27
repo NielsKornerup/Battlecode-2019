@@ -405,10 +405,16 @@ public class Castle {
             numFirstTwoPilgrimsBuilt++;
             return action;
         } else if (numFirstTwoPilgrimsBuilt == 1) {
-            // Build fuel pilgrim
-            Point closestFuelPoint = Utils.getClosestFuelPoint(r);
-            CommunicationUtils.sendPilgrimTargetMessage(r, closestFuelPoint, CommunicationUtils.PILGRIM_TARGET_RADIUS_SQ);
-            BuildAction action = Utils.tryAndBuildInDirectionOf(r, closestFuelPoint, r.SPECS.PILGRIM);
+            // Build Karb pilgrim if available, otherwise build fuel pilgrim
+            List<Point> closestKarbonitePoints = Utils.getClosestKarbonitePoints(r, Utils.myLocation(r));
+            Point pointToTarget;
+            if (closestKarbonitePoints.size() < 2) {
+                pointToTarget = Utils.getClosestFuelPoint(r);
+            } else {
+                pointToTarget = closestKarbonitePoints.get(1);
+            }
+            CommunicationUtils.sendPilgrimTargetMessage(r, pointToTarget, CommunicationUtils.PILGRIM_TARGET_RADIUS_SQ);
+            BuildAction action = Utils.tryAndBuildInDirectionOf(r, pointToTarget, r.SPECS.PILGRIM);
             numFirstTwoPilgrimsBuilt++;
             return action;
         }
