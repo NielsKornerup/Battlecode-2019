@@ -43,6 +43,15 @@ public class KarbFuelTargetQueue {
         karbQueue = computeResourceQueue(r, castleIdToResourceMap, enemyMap, karbLocationsToConsider);
     }
 
+	private boolean listContains(List<Point> list, Point point) {
+		for (Point other : list) {
+			if (other.equals(point)) {
+				return true;
+			}
+		}
+		return false;
+	}
+
 	private PriorityQueue computeResourceQueue(MyRobot r, HashMap<Integer, Navigation> castleIdToResourceMap,
 			Navigation enemyMap, List<Point> locationsToConsider) {
 		PriorityQueue toReturn = new PriorityQueue();
@@ -52,12 +61,12 @@ public class KarbFuelTargetQueue {
 			// Check if the point is either the closest Karbonite or closest Fuel point to one of the castles.
 			// Exclude it if so, because those pilgrims will have already spawned
 			List<Point> closeKarbPoints = Utils.getClosestKarbonitePoints(r, Utils.myLocation(r));
-			boolean isCloseKarbPoint = closeKarbPoints.contains(point);
+			boolean isCloseKarbPoint = listContains(closeKarbPoints, point);
 			boolean isCloseFuelPoint = closeKarbPoints.size() < 2 && point.equals(Utils.getClosestFuelPoint(r));
 			for (Integer id : otherCastleLocations.keySet()) {
 				Point other = otherCastleLocations.get(id);
 				List<Point> otherCloseKarbPoints = Utils.getClosestKarbonitePoints(r, other);
-				if (otherCloseKarbPoints.contains(point)) {
+				if (listContains(otherCloseKarbPoints, point)) {
 					isCloseKarbPoint = true;
 				}
 				if (otherCloseKarbPoints.size() < 2 && point.equals(Utils.getClosestFuelPoint(r, other))) {

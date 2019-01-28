@@ -49,4 +49,5 @@ public class Constants {
 	public static final int TURN_THRESHOLD_PRIORITIZE_CLOSEST_CASTLE = 50;
 
 	public static final int START_RUSH_CLUMPING = 25;
+	public static final int TURN_THRESHOLD_PRIORITIZE_CLOSE_CASTLES = 50;
 }
