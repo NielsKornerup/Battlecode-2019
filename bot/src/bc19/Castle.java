@@ -331,13 +331,18 @@ public class Castle {
     public static boolean shouldRush(MyRobot r) {
         // TODO MAKE THIS A LOT BETTER
         // Castles are close together and there's only 1 castle
-        return getMinDistBetweenTwoCastles(r) <= 15 && otherCastleLocations.size() == 0;
+        return r.me.team == 0;
+        // return getMinDistBetweenTwoCastles(r) <= 15 && otherCastleLocations.size() == 0;
     }
 
     private static Action doRush(MyRobot r) {
         BuildAction action = Utils.tryAndBuildInOptimalSpace(r, r.SPECS.PREACHER);
         if (action != null) {
-            CommunicationUtils.sendTurtleLocation(r, getClosestOtherCastleLocation(r));
+            if(r.turn >= Constants.START_RUSH_CLUMPING) {
+                CommunicationUtils.sendRushClumpMessage(r, getClosestOtherCastleLocation(r));
+            } else {
+                CommunicationUtils.sendTurtleLocation(r, getClosestOtherCastleLocation(r));
+            }
             return action;
         }
         return null;

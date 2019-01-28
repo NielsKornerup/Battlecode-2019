@@ -13,6 +13,7 @@ public class CommunicationUtils {
 	static final short ENEMY_CASTLE_LOCATION_MASK = (short) (0b011 << ARGUMENT_SIZE_BITS);
 	static final short AGGRESSIVE_SCOUT_MASK = (short) (0b010 << ARGUMENT_SIZE_BITS);
 	static final short CASTLE_INFORM_MASK = (short) (0b001 << ARGUMENT_SIZE_BITS);
+	static final short RUSH_CLUMP_BIT = (short) (0b1 << 12);
 
 	public static final int PILGRIM_TARGET_RADIUS_SQ = 2;
 	private static final int ATTACK_SIGNAL_RADIUS_SQ = 5;
@@ -108,6 +109,24 @@ public class CommunicationUtils {
 	public static boolean receivedAttackMessage(MyRobot r) {
 		for (Robot other : r.getVisibleRobots()) {
 			if (r.isRadioing(other) && instructionMatches(PROPHET_ATTACK_MASK, (short) other.signal)) {
+				return true;
+			}
+		}
+		return false;
+	}
+
+	public static boolean sendRushClumpMessage(MyRobot r, Point target) {
+		return sendRushClumpMessage(r, target, ATTACK_SIGNAL_RADIUS_SQ);
+	}
+
+	public static boolean sendRushClumpMessage(MyRobot r, Point target, int radiusSq) {
+		short message = (short) ((short) (TURTLE_MASK | ((short) target.x << 6) | ((short) target.y)) | RUSH_CLUMP_BIT);
+		return sendBroadcast(r, message, radiusSq);
+	}
+
+	public static boolean receivedRushClumpMessage(MyRobot r) {
+		for (Robot other : r.getVisibleRobots()) {
+			if (r.isRadioing(other) && instructionMatches(TURTLE_MASK, (short) other.signal) && (RUSH_CLUMP_BIT & other.signal) > 0) {
 				return true;
 			}
 		}
