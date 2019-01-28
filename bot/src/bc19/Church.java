@@ -10,6 +10,8 @@ public class Church {
 
     private static Lattice lattice;
 
+    private static int numUnitsSpawned = 0;
+
     public static Action act(MyRobot r) {
         if (r.turn == 1) {
             lattice = new Lattice(r, new HashMap<>(), new ArrayList<>());
@@ -38,17 +40,19 @@ public class Church {
             }
         }
 
-        // Spam prophets
-        if (Utils.canBuild(r, r.SPECS.PROPHET) && tick < TICK_MAX) {
+        // Alternate prophets and crusader spamming
+        int unitToBuild = numUnitsSpawned % 2 == 0 ? r.SPECS.CRUSADER : r.SPECS.PROPHET;
+        if (Utils.canBuild(r, unitToBuild) && tick < TICK_MAX) {
             tick++;
         }
         if (tick >= TICK_MAX) {
-            BuildAction action = Utils.tryAndBuildInOptimalSpace(r, r.SPECS.PROPHET);
+            BuildAction action = Utils.tryAndBuildInOptimalSpace(r, unitToBuild);
             if (action != null) {
-                Point prophetLocation = lattice.popProphetLatticeLocation();
-                if (prophetLocation != null) {
+                Point latticeLocation = lattice.popProphetLatticeLocation();
+                if (latticeLocation != null) {
                     tick = 0;
-                    CommunicationUtils.sendTurtleLocation(r, prophetLocation);
+                    numUnitsSpawned++;
+                    CommunicationUtils.sendTurtleLocation(r, latticeLocation);
                     return action;
                 } else {
                     r.log("Not spawning prophet because nowhere to send it.");

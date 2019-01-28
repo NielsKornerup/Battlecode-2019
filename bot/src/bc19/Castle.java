@@ -24,7 +24,7 @@ public class Castle {
     private static boolean waitingToBuildChurch = false;
 
     private static int buildTurnTick = 0;
-    private static int MAX_BUILD_TURN_TICK = 1;
+    private static int MAX_BUILD_TURN_TICK = 2;
 
     public static void handleCastleLocationMessages(MyRobot r) {
         if (r.turn == 1) {
@@ -370,7 +370,7 @@ public class Castle {
 
     private static void calculateBuildTurnTickMax(MyRobot r) {
         if (r.turn <= 5) {
-            MAX_BUILD_TURN_TICK = 1;
+            MAX_BUILD_TURN_TICK = 2;
         } else if (r.turn <= Constants.TURN_THRESHOLD_PRIORITIZE_CLOSE_CASTLES) {
             // 1 castle: I have 1
             // 2 castles: everyone has 2
@@ -380,16 +380,22 @@ public class Castle {
             double sum = 0;
 
             double myValue = onePointFivedDistanceToEnemyLocation(r, Utils.myLocation(r));
+            double smallest = myValue;
             sum += myValue;
             for (Point location : otherCastleLocations.values()) {
-                sum += onePointFivedDistanceToEnemyLocation(r, location);
+                double other = onePointFivedDistanceToEnemyLocation(r, location);
+                sum += other;
+                if (other < smallest) {
+                    smallest = other;
+                }
             }
 
             int totalCastles = otherCastleLocations.size() + 1;
             MAX_BUILD_TURN_TICK = (int) Math.round((myValue / sum) * totalCastles * totalCastles);
 
-            if (r.turn == 30) {
-                r.log("My tick is " + MAX_BUILD_TURN_TICK);
+            if (r.turn < 7 && smallest == myValue) {
+                r.log("Setting build turn tick");
+                buildTurnTick = MAX_BUILD_TURN_TICK - 1;
             }
         } else {
             // Distribute evenly
@@ -485,7 +491,7 @@ public class Castle {
 
         // 1B. Build combat units to survive rush
         int numFriendlyProphets = Utils.getRobotsInRange(r, r.SPECS.PROPHET, true, 0, 81).size();
-        if (numFriendlyProphets < numCombatUnitsToSurviveRush && lattice != null) { // TODO lattice != null here slows us down
+        if (r.turn > 5 && numFriendlyProphets < numCombatUnitsToSurviveRush) {
             BuildAction action = buildProphet(r);
             if (action != null) {
                 return action;
@@ -511,16 +517,22 @@ public class Castle {
         }
 
         // 3. Build aggressive scouts
-        if (mostContestedPoint != null && initialAggressiveScoutUnitsBuilt < Constants.NUM_AGGRESSIVE_SCOUT_UNITS_TO_BUILD) {
-            Point toGo = Utils.getNonResourceSpotAround(r, mostContestedPoint);
-            if (toGo != null) {
-                BuildAction action = Utils.tryAndBuildInOptimalSpace(r, r.SPECS.PROPHET);
-                if (action != null) {
-                    // Send our combat unit to the spot we're assigned to that's the closest to enemy
-                    r.log("Sending aggressive unit to " + toGo.x + " " + toGo.y);
-                    CommunicationUtils.sendAggressiveScoutLocation(r, toGo);
-                    initialAggressiveScoutUnitsBuilt++;
-                    return action;
+        if (numFriendlyProphets >= numCombatUnitsToSurviveRush && r.turn > 5 && mostContestedPoint != null && initialAggressiveScoutUnitsBuilt < Constants.NUM_AGGRESSIVE_SCOUT_UNITS_TO_BUILD) {
+            if (Utils.canBuild(r, r.SPECS.PROPHET) && buildTurnTick < MAX_BUILD_TURN_TICK) {
+                buildTurnTick++;
+            }
+            if (buildTurnTick >= MAX_BUILD_TURN_TICK) {
+                Point toGo = Utils.getNonResourceSpotAround(r, mostContestedPoint);
+                if (toGo != null) {
+                    BuildAction action = Utils.tryAndBuildInOptimalSpace(r, r.SPECS.PROPHET);
+                    if (action != null) {
+                        // Send our combat unit to the spot we're assigned to that's the closest to enemy
+                        r.log("Sending aggressive unit to " + toGo.x + " " + toGo.y);
+                        CommunicationUtils.sendAggressiveScoutLocation(r, toGo);
+                        initialAggressiveScoutUnitsBuilt++;
+                        buildTurnTick = 0;
+                        return action;
+                    }
                 }
             }
         }
@@ -536,7 +548,7 @@ public class Castle {
         }
 
         // 5. Contribute to prophet turtle
-        if (lattice != null) {
+        if (r.turn > 5) {
             if (r.turn < Constants.FUEL_CAP_TURN_THRESHOLD || r.fuel > Constants.FUEL_CAP) {
                 BuildAction action = buildProphet(r);
                 if (action != null) {
