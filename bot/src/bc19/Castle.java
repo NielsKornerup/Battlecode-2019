@@ -334,8 +334,8 @@ public class Castle {
     public static boolean shouldRush(MyRobot r) {
         // TODO MAKE THIS A LOT BETTER
         // Castles are close together and there's only 1 castle
-        return r.me.team == 0;
-        // return getMinDistBetweenTwoCastles(r) <= 15 && otherCastleLocations.size() == 0;
+        // return r.me.team == 0;
+        return getMinDistBetweenTwoCastles(r) <= 18 && otherCastleLocations.size() == 0;
     }
 
     private static Action doRush(MyRobot r) {
@@ -430,7 +430,7 @@ public class Castle {
         computeCombatUnitsToSurviveRush(r);
 
         // Allow for building a church
-        if (r.turn % 10 == 9 && churchesToAllowBuilding > 0) {
+        if (r.turn > 30 && r.turn % 10 == 9 && churchesToAllowBuilding > 0) {
             waitingToBuildChurch = true;
         }
     }
