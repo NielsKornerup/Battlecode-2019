@@ -307,7 +307,7 @@ public class Castle {
             }
         }
         if(loc == null) {
-            r.log("Could not find any enemy castle locations");
+            //r.log("Could not find any enemy castle locations");
         }
         return loc;
     }
@@ -407,7 +407,7 @@ public class Castle {
             MAX_BUILD_TURN_TICK = (int) Math.round((myValue / sum) * totalCastles * totalCastles);
 
             if (r.turn < 7 && smallest == myValue) {
-                r.log("Setting build turn tick");
+                //r.log("Setting build turn tick");
                 buildTurnTick = MAX_BUILD_TURN_TICK - 1;
             }
         } else {
@@ -430,7 +430,7 @@ public class Castle {
         computeCombatUnitsToSurviveRush(r);
 
         // Allow for building a church
-        if (r.turn > 30 && r.turn % 10 == 9 && churchesToAllowBuilding > 0) {
+        if (r.turn > 35 && r.turn % 10 == 9 && churchesToAllowBuilding > 0) {
             waitingToBuildChurch = true;
         }
     }
@@ -452,7 +452,7 @@ public class Castle {
                 buildTurnTick = 0;
                 return action;
             } else {
-                r.log("Not spawning crusader because nowhere to send it.");
+                //r.log("Not spawning crusader because nowhere to send it.");
             }
         }
 
@@ -476,7 +476,7 @@ public class Castle {
                 buildTurnTick = 0;
                 return action;
             } else {
-                r.log("Not spawning prophet because nowhere to send it.");
+                //r.log("Not spawning prophet because nowhere to send it.");
             }
         }
         return null;
@@ -491,6 +491,20 @@ public class Castle {
         computeEconomyVariables(r);
         updatePilgrimLocations(r);
         handleCastleTalk(r);
+
+        // If it's close to the end of the game, and we're down Castles, send attack message!
+        if (r.turn >= Constants.ATTACK_TURN && r.turn % 50 == 0 && otherCastleLocations.size() + 1 < enemyCastleLocations.size()) {
+            r.log("It's late game... sending attack message.");
+            // TODO this propogates like a virus, which can waste fuel. Modify it to just send one global message
+            // TODO This involves making it save enough fuel late in the game which is why it hasn't been done yet
+            // Try to maximize our range
+            for (int i = 4; i > 0; i--) {
+                boolean sentSuccessfully = CommunicationUtils.sendAttackMessage(r, i * i);
+                if (sentSuccessfully) {
+                    break;
+                }
+            }
+        }
 
         // 0. Build first two pilgrims
         Action buildAction = buildFirstTwoPilgrims(r);

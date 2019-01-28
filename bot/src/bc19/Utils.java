@@ -514,7 +514,7 @@ public class Utils {
             }
         }
         if(closest == null) {
-            r.log("found no karbonite points");
+            //r.log("found no karbonite points");
         }
         return closest;
     }
@@ -566,7 +566,7 @@ public class Utils {
             }
         }
         if(closest == null) {
-            r.log("found no fuel points");
+            //r.log("found no fuel points");
         }
         return closest;
     }
@@ -602,7 +602,7 @@ public class Utils {
                 }
             }
         }
-        r.log("Contested karb location is " + finalPoint.x + " " + finalPoint.y);
+        //r.log("Contested karb location is " + finalPoint.x + " " + finalPoint.y);
         return finalPoint;
     }
 

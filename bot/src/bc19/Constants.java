@@ -44,7 +44,7 @@ public class Constants {
 
 	public static final double ENEMY_RESOURCE_PENETRATION_PERCENTAGE = 1.2;
 
-	public static final int ATTACK_TURN = 800;
+	public static final int ATTACK_TURN = 850;
 
 	public static final int TURN_THRESHOLD_PRIORITIZE_CLOSE_CASTLES = 100;
 

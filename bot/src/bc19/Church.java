@@ -34,7 +34,7 @@ public class Church {
                         CommunicationUtils.sendTurtleLocation(r, crusaderLocation);
                         return action;
                     } else {
-                        r.log("Not spawning crusader because nowhere to send it.");
+                        //r.log("Not spawning crusader because nowhere to send it.");
                     }
                 }
             }
@@ -55,7 +55,7 @@ public class Church {
                     CommunicationUtils.sendTurtleLocation(r, latticeLocation);
                     return action;
                 } else {
-                    r.log("Not spawning prophet because nowhere to send it.");
+                    //r.log("Not spawning prophet because nowhere to send it.");
                 }
             }
         }

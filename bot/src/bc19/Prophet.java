@@ -23,6 +23,7 @@ public class Prophet {
     private static boolean isTurtle = false;
 
     private static Action beginAttack(MyRobot r) {
+        enemyCastleMap = null;
         if (Math.random() < .5) {
             CommunicationUtils.sendAttackMessage(r);
         }
@@ -33,9 +34,6 @@ public class Prophet {
     private static void computeEnemyCastlesMap(MyRobot r) {
         ArrayList<Point> targets = new ArrayList<>();
         targets.add(enemyCastleLocation);
-        for (Point location : otherEnemyCastleLocations.keySet()) {
-            targets.add(location);
-        }
         //enemyCastleMap = new Navigation(r, r.getPassableMap(), targets);
         enemyCastleMap = new Navigation(r, r.getPassableMap(), targets, r.getKarboniteMap(), r.getFuelMap());
     }
@@ -148,15 +146,6 @@ public class Prophet {
         	return doTurtleActions(r);
         }
 
-        if (r.turn < Constants.TURNS_BEFORE_DONE_RECEIVING_ENEMY_CASTLE_LOCATIONS) {
-            getEnemyCastleLocations(r);
-        } else if (r.turn == Constants.TURNS_BEFORE_DONE_RECEIVING_ENEMY_CASTLE_LOCATIONS) {
-            computeEnemyCastlesMap(r);
-        } else {
-            // Invalidate any Dijkstra map targets that are stale
-            invalidateEnemyCastleTargetsIfNecessary(r);
-        }
-
         // 1. Attack enemies if nearby
         AttackAction attackAction = Utils.tryAndAttack(r, Utils.mySpecs(r).ATTACK_RADIUS[1]);
         if (attackAction != null) {
@@ -189,6 +178,9 @@ public class Prophet {
             }
         } else if (state == State.ATTACKING) {
             // Approach the enemy
+            if (enemyCastleMap == null) {
+                computeEnemyCastlesMap(r);
+            }
             return Utils.moveDijkstraThenRandom(r, enemyCastleMap, 2);
         }
 

@@ -10,8 +10,26 @@ public class Crusader {
 	private static Point enemyCastleLocation;
 	
 	private static boolean isTurtle = false;
+
+	private static boolean attacking = false;
+
+	private static Action beginAttack(MyRobot r) {
+		attacking = true;
+		enemyCastleMap = null;
+		if (Math.random() < .5) {
+			CommunicationUtils.sendAttackMessage(r);
+		}
+		return act(r);
+	}
 	
 	private static Navigation enemyCastleMap;
+
+	private static void computeEnemyCastlesMap(MyRobot r) {
+		ArrayList<Point> targets = new ArrayList<>();
+		targets.add(enemyCastleLocation);
+		//enemyCastleMap = new Navigation(r, r.getPassableMap(), targets);
+		enemyCastleMap = new Navigation(r, r.getPassableMap(), targets, r.getKarboniteMap(), r.getFuelMap());
+	}
 
 	public static Action act(MyRobot r) {
 		if (r.turn == 1) {
@@ -20,6 +38,17 @@ public class Crusader {
 
             doCrusaderInitialization(r);
         }
+
+		if (CommunicationUtils.receivedAttackMessage(r)) {
+			return beginAttack(r);
+		}
+
+		if (attacking) {
+			if (enemyCastleMap == null) {
+				computeEnemyCastlesMap(r);
+			}
+			return Utils.moveDijkstraThenRandom(r, enemyCastleMap, 2);
+		}
 
 		// 1. Attack enemies if nearby
         AttackAction attackAction = Utils.tryAndAttack(r, Utils.mySpecs(r).ATTACK_RADIUS[1]);
