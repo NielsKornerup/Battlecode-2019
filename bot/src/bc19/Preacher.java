@@ -17,6 +17,7 @@ public class Preacher {
 
     private static Navigation enemyCastleMap;
 
+    private static boolean shouldClump = false;
 
     private static void invalidateEnemyCastleTargetsIfNecessary(MyRobot r) {
         if (enemyCastleMap == null) {
@@ -49,6 +50,10 @@ public class Preacher {
             doCrusaderInitialization(r);
         }
 
+        if (!shouldClump && CommunicationUtils.receivedRushClumpMessage(r)) {
+            shouldClump = true;
+        }
+
         invalidateEnemyCastleTargetsIfNecessary(r);
 
         // 1. Attack enemies if nearby
@@ -57,7 +62,10 @@ public class Preacher {
             return attackAction;
         }
 
-        if(!nearOtherPreachers(r)) {
+        if (shouldClump) {
+            if (nearOtherPreachers(r)) {
+                shouldClump = false;
+            }
             return null;
         }
 
